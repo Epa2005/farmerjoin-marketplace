@@ -1,3 +1,4 @@
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
 // Pages
@@ -17,6 +18,9 @@ import Orders from "./pages/Orders";
 import OrderSuccess from "./pages/OrderSuccess";
 import FarmerProfile from "./pages/FarmerProfile";
 import SubscriptionBoxes from "./pages/SubscriptionBoxes";
+import UserManagement from "./pages/UserManagement";
+import Products from "./pages/Products";
+import ProductDetail from "./pages/ProductDetail";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -82,6 +86,16 @@ function App() {
               }
             />
 
+            {/* User Management (protected for managers) */}
+            <Route
+              path="/user-management"
+              element={
+                <ProtectedRoute role="admin">
+                  <UserManagement />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Edit Product (protected for farmers) */}
             <Route
               path="/edit-product/:productId"
@@ -112,9 +126,28 @@ function App() {
               }
             />
 
-            {/* Fallback: redirect unknown routes to home */}
-            <Route path="*" element={<Navigate to="/" replace />}
+            {/* Products (protected for all authenticated users) */}
+            <Route
+              path="/products"
+              element={
+                <ProtectedRoute>
+                  <Products />
+                </ProtectedRoute>
+              }
             />
+
+            {/* Product Detail (protected for all authenticated users) */}
+            <Route
+              path="/products/:productId"
+              element={
+                <ProtectedRoute>
+                  <ProductDetail />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Fallback: redirect unknown routes to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
             
             {/* Auth Redirect for direct access */}
             <Route path="/auth-redirect" element={<AuthRedirect />} />

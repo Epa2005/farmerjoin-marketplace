@@ -1,220 +1,474 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import HeroSlider from "../components/HeroSlider";
+import ImageSlideshow from "../components/ImageSlideshow";
 
 const Home = () => {
     const [stats, setStats] = useState({
-        farmers: 0,
+        users: 0,
         products: 0,
-        orders: 0,
-        cooperatives: 0
+        markets: 0,
+        satisfaction: 0
     });
+    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [scrollProgress, setScrollProgress] = useState(0);
+    const [isVisible, setIsVisible] = useState({});
 
+    // Agricultural photos for hero slideshow
+    const agriPhotos = [
+        '/agri_photoes/close-up-countryside-worker-holding-peanuts.jpg',
+        '/agri_photoes/countryside-people-out-field-together.jpg',
+        '/agri_photoes/countryside-woman-holding-plant-leaves.jpg',
+        '/agri_photoes/tamrat-touloumon-g6cUko7Ss4E-unsplash.jpg'
+    ];
+
+    // Animated counter effect
     useEffect(() => {
-        // Mock data for demonstration
-        setStats({
-            farmers: 1250,
-            products: 4580,
-            orders: 12350,
-            cooperatives: 45
-        });
+        const timer = setTimeout(() => {
+            setStats({
+                users: 5000,
+                products: 2000,
+                markets: 50,
+                satisfaction: 98
+            });
+        }, 500);
+        return () => clearTimeout(timer);
     }, []);
 
+    // Scroll progress indicator
+    useEffect(() => {
+        const handleScroll = () => {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercent = (scrollTop / docHeight) * 100;
+            setScrollProgress(scrollPercent);
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    // Intersection Observer for animations
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        setIsVisible(prev => ({ ...prev, [entry.target.id]: true }));
+                    }
+                });
+            },
+            { threshold: 0.1 }
+        );
+
+        const elements = document.querySelectorAll('.animate-on-scroll');
+        elements.forEach(el => observer.observe(el));
+        return () => observer.disconnect();
+    }, []);
+
+    const toggleDarkMode = () => {
+        setIsDarkMode(!isDarkMode);
+        document.documentElement.classList.toggle('dark');
+    };
+
     return (
-        <div className="relative min-h-screen">
-            {/* Hero Section */}
-            <HeroSlider />
-            
-            {/* Main Content Section with Glass Morphism */}
-            <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 py-20 relative overflow-hidden">
-                {/* Animated Background Pattern */}
+        <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
+            {/* Scroll Progress Indicator */}
+            <div className="fixed top-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-800 z-50">
+                <div 
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-600 transition-all duration-300"
+                    style={{ width: `${scrollProgress}%` }}
+                />
+            </div>
+
+            {/* Dark Mode Toggle */}
+            <button
+                onClick={toggleDarkMode}
+                className="fixed top-6 right-6 z-50 p-3 bg-white dark:bg-gray-800 rounded-full shadow-2xl border border-gray-200 dark:border-gray-700 hover:scale-110 transition-all duration-300"
+            >
+                {isDarkMode ? (
+                    <svg className="w-6 h-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                ) : (
+                    <svg className="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                )}
+            </button>
+
+            {/* 1️⃣ POWERFUL HERO SECTION WITH AGRICULTURAL SLIDESHOW */}
+            <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
+                {/* Agricultural Photo Slideshow as Background */}
                 <div className="absolute inset-0">
-                    <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-r from-emerald-400/20 to-cyan-400/20 rounded-full filter blur-3xl animate-pulse"></div>
-                    <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-teal-400/20 to-blue-400/20 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-to-r from-blue-400/15 to-purple-400/15 rounded-full filter blur-2xl animate-pulse delay-500"></div>
+                    <ImageSlideshow images={agriPhotos} interval={3000} />
                 </div>
                 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                    <div className="text-center mb-16">
-                        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                            Agricultural Technology, <span className="text-green-600">Redefined</span>
-                        </h1>
-                        <h2 className="text-2xl md:text-3xl text-gray-700 mb-8 font-light">
-                            We help Rwandan farmers integrate data, technology, and field-level agronomy to deliver better outcomes
+                {/* Dark Overlay for Text Visibility */}
+                <div className="absolute inset-0 bg-black/40"></div>
+                
+                {/* Animated Background Elements */}
+                <div className="absolute inset-0">
+                    <div className="absolute top-20 left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+                    <div className="absolute bottom-20 right-20 w-96 h-96 bg-white/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-white/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                    
+                    {/* Floating Shapes */}
+                    <div className="absolute top-1/4 left-1/4 w-20 h-20 border-2 border-white/20 rounded-lg animate-bounce" style={{ animationDelay: '2s' }}></div>
+                    <div className="absolute bottom-1/4 right-1/4 w-16 h-16 border-2 border-white/20 rounded-full animate-spin" style={{ animationDuration: '8s', animationDelay: '3s' }}></div>
+                    <div className="absolute top-3/4 left-3/4 w-12 h-12 border-2 border-white/20 rotate-45 animate-pulse" style={{ animationDelay: '4s' }}></div>
+                </div>
+
+                <div className="relative z-10 text-center text-white px-4 max-w-6xl mx-auto">
+                    <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-4 leading-tight tracking-tight animate-fade-in-up">
+                        Connecting Farmers
+                        <span className="block text-emerald-200">Directly to Markets</span>
+                    </h1>
+                    <p className="text-lg md:text-xl lg:text-2xl font-light mb-8 leading-relaxed max-w-4xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+                        Sell smarter. Buy faster. Grow together.
+                    </p>
+                    
+                    <div className="flex flex-col sm:flex-row gap-6 justify-center animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+                        <Link
+                            to="/register"
+                            className="group relative px-12 py-5 bg-white text-emerald-600 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 overflow-hidden"
+                        >
+                            <span className="relative z-10">Get Started</span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-emerald-50 to-teal-50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
+                        </Link>
+                        <Link
+                            to="/about"
+                            className="px-12 py-5 border-2 border-white text-white rounded-2xl font-bold text-lg hover:bg-white hover:text-emerald-600 transform hover:scale-105 transition-all duration-300 shadow-xl"
+                        >
+                            Learn More
+                        </Link>
+                    </div>
+                </div>
+
+                {/* Scroll Indicator */}
+                <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+                    <svg className="w-6 h-10 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                </div>
+            </section>
+
+            {/* 2️⃣ ANIMATED STATISTICS SECTION */}
+            <section id="stats" className="py-12 bg-white dark:bg-gray-900 animate-on-scroll">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                        {[
+                            { value: stats.users, label: 'Users', suffix: '+', icon: '👥' },
+                            { value: stats.products, label: 'Products', suffix: '+', icon: '🌾' },
+                            { value: stats.markets, label: 'Markets', suffix: '+', icon: '🏪' },
+                            { value: stats.satisfaction, label: 'Satisfaction', suffix: '%', icon: '⭐' }
+                        ].map((stat, index) => (
+                            <div key={index} className="text-center group">
+                                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-gray-800 dark:to-gray-700 p-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border border-emerald-100 dark:border-gray-600">
+                                    <div className="text-3xl mb-3">{stat.icon}</div>
+                                    <div className={`text-3xl md:text-4xl font-black text-emerald-600 dark:text-emerald-400 mb-2 ${isVisible['stats'] ? 'animate-counter' : ''}`}>
+                                        {stat.value}{stat.suffix}
+                                    </div>
+                                    <div className="text-gray-600 dark:text-gray-300 font-medium">
+                                        {stat.label}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* 3️⃣ PROBLEM → SOLUTION SECTION */}
+            <section id="problem-solution" className="py-12 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 animate-on-scroll">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                        {/* Problem */}
+                        <div className="relative">
+                            <div className="absolute -top-4 -left-4 text-5xl text-red-500 dark:text-red-400">❌</div>
+                            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                                The Problem
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex items-start space-x-3">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                                    <p className="text-gray-700 dark:text-gray-300">
+                                        Farmers lose 30-40% of profits to middlemen
+                                    </p>
+                                </div>
+                                <div className="flex items-start space-x-3">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                                    <p className="text-gray-700 dark:text-gray-300">
+                                        Limited market access for small-scale farmers
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Solution */}
+                        <div className="relative">
+                            <div className="absolute -top-4 -left-4 text-5xl text-green-500 dark:text-green-400">✔</div>
+                            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                                The Solution
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="flex items-start space-x-3">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                                    <p className="text-gray-700 dark:text-gray-300">
+                                        Direct farmer-to-buyer connections eliminate middlemen
+                                    </p>
+                                </div>
+                                <div className="flex items-start space-x-3">
+                                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                                    <p className="text-gray-700 dark:text-gray-300">
+                                        Transparent pricing ensures fair competition
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* 4️⃣ FEATURES SECTION */}
+            <section id="features" className="py-12 bg-white dark:bg-gray-900 animate-on-scroll">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                            Powerful Features
                         </h2>
-                        <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                            FarmerJoin is the digital marketplace partner for agriculture, supporting farmers, buyers, and cooperatives 
-                            with solutions designed to scale across complex agricultural environments in Rwanda.
+                        <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                            Everything you need to succeed in modern agriculture
                         </p>
-                        <div className="mt-8">
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[
+                            {
+                                icon: '📱',
+                                title: 'Mobile First',
+                                description: 'Access markets from anywhere with our mobile-optimized platform',
+                                color: 'from-blue-500 to-cyan-500'
+                            },
+                            {
+                                icon: '🔒',
+                                title: 'Secure Payments',
+                                description: 'Safe and reliable payment processing for all transactions',
+                                color: 'from-green-500 to-emerald-500'
+                            },
+                            {
+                                icon: '📊',
+                                title: 'Real-time Analytics',
+                                description: 'Track sales, inventory, and market trends instantly',
+                                color: 'from-purple-500 to-pink-500'
+                            },
+                            {
+                                icon: '💬',
+                                title: 'Direct Messaging',
+                                description: 'Communicate directly with buyers and sellers',
+                                color: 'from-orange-500 to-red-500'
+                            }
+                        ].map((feature, index) => (
+                            <div key={index} className="group">
+                                <div className={`bg-gradient-to-br ${feature.color} p-1 rounded-2xl hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl`}>
+                                    <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl h-full">
+                                        <div className="text-4xl mb-4">{feature.icon}</div>
+                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+                                            {feature.title}
+                                        </h3>
+                                        <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">
+                                            {feature.description}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* 5️⃣ PREVIEW / DEMO SECTION */}
+            <section id="preview" className="py-8 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 animate-on-scroll">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-8">
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                            See It in Action
+                        </h2>
+                        <p className="text-base text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                            Experience FarmerJoin firsthand
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+                                Key Benefits
+                            </h3>
+                            <div className="space-y-2">
+                                {[
+                                    'Increase farmer income by 40%',
+                                    'Reduce post-harvest losses by 60%',
+                                    'Access to 50+ new markets'
+                                ].map((benefit, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                        <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                            <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                        <span className="text-gray-700 dark:text-gray-300 text-sm">{benefit}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-emerald-600 to-teal-600 p-4 rounded-xl shadow-lg text-white">
+                            <h3 className="text-lg font-bold mb-3">
+                                Start Your Journey
+                            </h3>
+                            <p className="text-emerald-100 mb-3 text-sm">
+                                Join thousands of successful farmers and buyers
+                            </p>
                             <Link
                                 to="/register"
-                                className="inline-flex items-center bg-gradient-to-r from-green-600/90 to-emerald-600/90 hover:from-green-700/90 hover:to-emerald-700/90 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-xl backdrop-blur-sm"
+                                className="inline-block bg-white text-emerald-600 px-4 py-2 rounded-lg font-bold hover:bg-emerald-50 transform hover:scale-105 transition-all duration-300"
                             >
-                                Get Started
-                                <svg className="w-5 h-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                </svg>
+                                Try Demo Now
                             </Link>
                         </div>
                     </div>
+                </div>
+            </section>
 
-                    {/* Capabilities Grid */}
-                    <div className="mb-20">
-                        <h3 className="text-2xl font-bold text-gray-900 mb-12 text-center">What We Do</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                            <div className="bg-white/20 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white/30 hover:bg-white/30 transition-all duration-300 group">
-                                <h4 className="text-lg font-semibold text-gray-900 mb-4 group-hover:text-green-600 transition-colors">
-                                    Digital Marketplace
-                                </h4>
-                                <p className="text-gray-600 leading-relaxed">
-                                    Connect farmers directly with buyers through our secure digital platform, eliminating middlemen and ensuring fair prices.
-                                </p>
-                            </div>
-                            <div className="bg-white/20 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white/30 hover:bg-white/30 transition-all duration-300 group">
-                                <h4 className="text-lg font-semibold text-gray-900 mb-4 group-hover:text-green-600 transition-colors">
-                                    Farm Management
-                                </h4>
-                                <p className="text-gray-600 leading-relaxed">
-                                    Tools and insights to help farmers manage their operations, track production, and optimize yields.
-                                </p>
-                            </div>
-                            <div className="bg-white/20 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white/30 hover:bg-white/30 transition-all duration-300 group">
-                                <h4 className="text-lg font-semibold text-gray-900 mb-4 group-hover:text-green-600 transition-colors">
-                                    Cooperative Support
-                                </h4>
-                                <p className="text-gray-600 leading-relaxed">
-                                    Empowering agricultural cooperatives with technology to scale their operations and reach more markets.
-                                </p>
-                            </div>
-                            <div className="bg-white/20 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white/30 hover:bg-white/30 transition-all duration-300 group">
-                                <h4 className="text-lg font-semibold text-gray-900 mb-4 group-hover:text-green-600 transition-colors">
-                                    Data & Analytics
-                                </h4>
-                                <p className="text-gray-600 leading-relaxed">
-                                    Real-time market data and analytics to help farmers make informed decisions about their crops and pricing.
-                                </p>
-                            </div>
-                        </div>
+            {/* 6️⃣ TESTIMONIALS SECTION */}
+            <section id="testimonials" className="py-12 bg-white dark:bg-gray-900 animate-on-scroll">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                            Trusted by Farmers
+                        </h2>
+                        <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                            Real stories from real users
+                        </p>
                     </div>
 
-                    {/* Statistics Section */}
-                    <div className="bg-white/20 backdrop-blur-xl rounded-3xl p-12 shadow-2xl border border-white/30">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-                            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                                <div className="text-4xl font-bold text-green-600 mb-2">{stats.farmers}+</div>
-                                <div className="text-gray-600 font-medium">Active Farmers</div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[
+                            {
+                                name: 'Jean Mugisha',
+                                role: 'Coffee Farmer',
+                                location: 'Northern Province',
+                                image: '/images/farmer1.jpg',
+                                testimonial: 'FarmerJoin helped me connect directly with buyers in Kigali. My income increased by 45% in just 6 months!',
+                                rating: 5
+                            },
+                            {
+                                name: 'Grace Uwimana',
+                                role: 'Vegetable Seller',
+                                location: 'Kigali',
+                                image: '/images/buyer1.jpg',
+                                testimonial: 'I can now source fresh produce directly from farmers. The quality is amazing and prices are fair.',
+                                rating: 5
+                            },
+                            {
+                                name: 'Emmanuel Niyonzima',
+                                role: 'Cooperative Leader',
+                                location: 'Eastern Province',
+                                image: '/images/coop1.jpg',
+                                testimonial: 'Our cooperative scaled from 50 to 200+ farmers using FarmerJoin. It transformed our community.',
+                                rating: 5
+                            }
+                        ].map((testimonial, index) => (
+                            <div key={index} className="group">
+                                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border border-gray-100 dark:border-gray-700">
+                                    <div className="flex items-center mb-4">
+                                        <img 
+                                            src={testimonial.image} 
+                                            alt={testimonial.name}
+                                            className="w-12 h-12 rounded-full object-cover mr-3"
+                                            onError={(e) => {
+                                                e.target.src = `https://ui-avatars.com/api/?name=${testimonial.name}&background=10b981&color=fff`;
+                                            }}
+                                        />
+                                        <div>
+                                            <h4 className="font-bold text-gray-900 dark:text-white text-sm">{testimonial.name}</h4>
+                                            <p className="text-xs text-gray-600 dark:text-gray-400">{testimonial.role} • {testimonial.location}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex mb-3">
+                                        {[...Array(testimonial.rating)].map((_, i) => (
+                                            <svg key={i} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                            </svg>
+                                        ))}
+                                    </div>
+                                    
+                                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed italic text-sm">
+                                        "{testimonial.testimonial}"
+                                    </p>
+                                </div>
                             </div>
-                            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                                <div className="text-4xl font-bold text-green-600 mb-2">{stats.products}+</div>
-                                <div className="text-gray-600 font-medium">Products Listed</div>
-                            </div>
-                            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                                <div className="text-4xl font-bold text-green-600 mb-2">{stats.orders}+</div>
-                                <div className="text-gray-600 font-medium">Orders Completed</div>
-                            </div>
-                            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
-                                <div className="text-4xl font-bold text-green-600 mb-2">{stats.cooperatives}+</div>
-                                <div className="text-gray-600 font-medium">Cooperatives</div>
-                            </div>
-                        </div>
+                        ))}
                     </div>
                 </div>
-            </div>
+            </section>
 
-            {/* Features Section */}
-            <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-20 relative overflow-hidden">
-                {/* Animated Background Pattern */}
-                <div className="absolute inset-0">
-                    <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-full filter blur-3xl animate-pulse"></div>
-                    <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-to-r from-teal-600/15 to-blue-600/15 rounded-full filter blur-2xl animate-pulse delay-500"></div>
-                </div>
+            {/* Custom Styles */}
+            <style jsx>{`
+                @keyframes fade-in-up {
+                    from {
+                        opacity: 0;
+                        transform: translateY(30px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
                 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                        <div>
-                            <h3 className="text-3xl md:text-4xl font-bold text-white mb-6">
-                                Enterprise Technology. Built for Agriculture.
-                            </h3>
-                            <p className="text-gray-300 text-lg leading-relaxed mb-8">
-                                FarmerJoin is the digital marketplace partner for Rwandan agriculture, supporting farmers, cooperatives, 
-                                and buyers with solutions designed to scale across complex agricultural environments.
-                            </p>
-                            <p className="text-gray-300 text-lg leading-relaxed mb-8">
-                                We deliver the platform that helps agricultural leaders integrate data, technology, 
-                                and field-level agronomy to deliver auditable, monetizable outcomes.
-                            </p>
-                            <Link
-                                to="/about"
-                                className="inline-flex items-center bg-gradient-to-r from-green-600/90 to-emerald-600/90 hover:from-green-700/90 hover:to-emerald-700/90 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-xl backdrop-blur-sm"
-                            >
-                                Learn More
-                                <svg className="w-5 h-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                </svg>
-                            </Link>
-                        </div>
-                        <div className="grid grid-cols-2 gap-6">
-                            <div className="bg-white/10 backdrop-blur-xl p-6 rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300">
-                                <div className="text-green-400 text-3xl mb-4">🌱</div>
-                                <h4 className="text-white font-semibold mb-2">Sustainable Farming</h4>
-                                <p className="text-gray-300 text-sm">Promoting environmentally friendly agricultural practices</p>
-                            </div>
-                            <div className="bg-white/10 backdrop-blur-xl p-6 rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300">
-                                <div className="text-green-400 text-3xl mb-4">📊</div>
-                                <h4 className="text-white font-semibold mb-2">Data-Driven</h4>
-                                <p className="text-gray-300 text-sm">Real-time insights for better decision making</p>
-                            </div>
-                            <div className="bg-white/10 backdrop-blur-xl p-6 rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300">
-                                <div className="text-green-400 text-3xl mb-4">🤝</div>
-                                <h4 className="text-white font-semibold mb-2">Fair Trade</h4>
-                                <p className="text-gray-300 text-sm">Ensuring fair prices for farmers</p>
-                            </div>
-                            <div className="bg-white/10 backdrop-blur-xl p-6 rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300">
-                                <div className="text-green-400 text-3xl mb-4">🚀</div>
-                                <h4 className="text-white font-semibold mb-2">Scalable</h4>
-                                <p className="text-gray-300 text-sm">Technology that grows with your business</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* CTA Section */}
-            <div className="bg-gradient-to-r from-green-600/90 to-emerald-600/90 py-16 relative overflow-hidden">
-                {/* Animated Background Pattern */}
-                <div className="absolute inset-0">
-                    <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-r from-green-400/20 to-emerald-400/20 rounded-full filter blur-3xl animate-pulse"></div>
-                    <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-r from-emerald-400/20 to-teal-400/20 rounded-full filter blur-3xl animate-pulse delay-1000"></div>
-                </div>
+                @keyframes counter {
+                    from {
+                        opacity: 0;
+                        transform: scale(0.5);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
+                }
                 
-                <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
-                    <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                        Ready to Transform Your Agricultural Business?
-                    </h3>
-                    <p className="text-green-100 text-lg mb-8">
-                        Join thousands of farmers and buyers already using FarmerJoin to grow their agricultural enterprises.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <Link
-                            to="/register"
-                            className="bg-white/20 backdrop-blur-xl hover:bg-white/30 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-xl border border-white/30"
-                        >
-                            Register as Farmer
-                        </Link>
-                        <Link
-                            to="/register"
-                            className="border-2 border-white/50 hover:bg-white/20 hover:text-white text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm"
-                        >
-                            Register as Buyer
-                        </Link>
-                    </div>
-                    <p className="text-green-100 mt-6 text-sm">
-                        Already have an account? <Link to="/login" className="text-white hover:text-green-100 underline">Sign in here</Link>
-                    </p>
-                </div>
-            </div>
+                .animate-fade-in-up {
+                    animation: fade-in-up 0.8s ease-out forwards;
+                }
+                
+                .animate-fade-in-up.delay-200 {
+                    animation-delay: 0.2s;
+                }
+                
+                .animate-fade-in-up.delay-400 {
+                    animation-delay: 0.4s;
+                }
+                
+                .animate-counter {
+                    animation: counter 1s ease-out forwards;
+                }
+                
+                .delay-1000 {
+                    animation-delay: 1s;
+                }
+                
+                .delay-2000 {
+                    animation-delay: 2s;
+                }
+                
+                .delay-3000 {
+                    animation-delay: 3s;
+                }
+                
+                .delay-4000 {
+                    animation-delay: 4s;
+                }
+            `}</style>
         </div>
     );
 };

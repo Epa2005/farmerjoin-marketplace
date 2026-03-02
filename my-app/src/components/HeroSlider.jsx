@@ -8,38 +8,38 @@ const HeroSlider = () => {
 
   const slides = [
     {
-      image: '/images/farmer-field.jpg',
-      title: 'Agricultural Technology',
-      subtitle: 'Redefined for Rwanda',
-      description: 'Enterprise solutions connecting farmers to digital markets',
-      gradient: 'from-green-700/80 to-emerald-800/80'
-    },
-    {
-      image: '/images/crops-harvest.jpg',
-      title: 'Data-Driven Farming',
-      subtitle: 'Smart Agriculture',
-      description: 'Real-time insights for better agricultural decisions',
-      gradient: 'from-blue-700/80 to-indigo-800/80'
-    },
-    {
-      image: '/images/farm-field.jpg',
-      title: 'Digital Marketplace',
-      subtitle: 'Direct Connections',
-      description: 'Eliminating middlemen, ensuring fair prices for farmers',
-      gradient: 'from-amber-700/80 to-orange-800/80'
-    },
-    {
-      image: '/images/farming-equipment.jpg',
-      title: 'Sustainable Growth',
-      subtitle: 'Future of Farming',
-      description: 'Technology that scales with your agricultural business',
+      image: 'https://images.unsplash.com/photo-1577683663445-9d5d4e9b0f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80',
+      title: 'Rwandan Farmers',
+      subtitle: 'Growing Together',
+      description: 'Local Rwandan farmers cultivating premium coffee and tea for direct market access',
       gradient: 'from-emerald-700/80 to-teal-800/80'
     },
     {
-      image: '/images/farmers-market.jpg',
-      title: 'Cooperative Power',
-      subtitle: 'Together We Grow',
-      description: 'Empowering agricultural communities across Rwanda',
+      image: 'https://images.unsplash.com/photo-1592831564632-0c1a3e8a5a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80',
+      title: 'Fresh Produce',
+      subtitle: 'Quality Guaranteed',
+      description: 'Premium Rwandan vegetables and fruits harvested at peak freshness for buyers',
+      gradient: 'from-green-700/80 to-emerald-800/80'
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1605000797494-3177d6a5cb?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80',
+      title: 'Digital Marketplace',
+      subtitle: 'Direct Trading',
+      description: 'Rwandan farmers connecting with buyers through modern technology platforms',
+      gradient: 'from-blue-700/80 to-indigo-800/80'
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1542831371-97e0731d9d0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80',
+      title: 'Cooperative Success',
+      subtitle: 'Community Power',
+      description: 'Rwandan farming cooperatives thriving through collective market access',
+      gradient: 'from-amber-700/80 to-orange-800/80'
+    },
+    {
+      image: 'https://images.unsplash.com/photo-1571013108002-1f0cce899cd5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80',
+      title: 'Fair Trade',
+      subtitle: 'Better Prices',
+      description: 'Rwandan farmers receiving fair compensation through direct buyer connections',
       gradient: 'from-purple-700/80 to-pink-800/80'
     }
   ];

@@ -23,6 +23,12 @@ function Navbar() {
                             About
                         </Link>
                         <Link 
+                            to="/products" 
+                            className="text-white hover:bg-primary-700 px-3 py-2 rounded-md font-medium transition-colors font-ui tracking-wide"
+                        >
+                            Products
+                        </Link>
+                        <Link 
                             to="/login" 
                             className="text-white hover:bg-primary-700 px-3 py-2 rounded-md font-medium transition-colors font-ui tracking-wide"
                         >
@@ -69,6 +75,12 @@ function Navbar() {
                             className="text-white hover:bg-primary-700 block px-3 py-2 rounded-md font-medium"
                         >
                             Login
+                        </Link>
+                        <Link 
+                            to="/products" 
+                            className="text-white hover:bg-primary-700 block px-3 py-2 rounded-md font-medium"
+                        >
+                            Products
                         </Link>
                         <Link 
                             to="/dashboard" 

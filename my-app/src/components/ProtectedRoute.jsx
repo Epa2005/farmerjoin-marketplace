@@ -14,10 +14,8 @@ const ProtectedRoute = ({ children, role }) => {
     // Logged in but wrong role - redirect to appropriate dashboard
     if (user.role === "buyer") {
       return <Navigate to="/buyer-dashboard" replace />;
-    } else if (user.role === "farmer") {
+    } else if (user.role === "farmer" || user.role === "cooperative") {
       return <Navigate to="/dashboard" replace />;
-    } else if (user.role === "cooperative") {
-      return <Navigate to="/cooperative-dashboard" replace />;
     } else if (user.role === "admin") {
       return <Navigate to="/admin-dashboard" replace />;
     } else {

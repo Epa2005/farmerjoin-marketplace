@@ -57,10 +57,21 @@ function Register() {
         navigate("/login");
       }, 2000);
     } catch (err) {
+      console.error("Registration error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        config: err.config
+      });
+      
       if (err.response?.data?.message === "Email already exists") {
         setError("This email is already registered");
+      } else if (err.response?.status === 0) {
+        setError("Network error: Unable to connect to server. Please check your connection.");
+      } else if (err.code === "ECONNREFUSED") {
+        setError("Cannot connect to server. Please make sure the backend is running on port 4000.");
       } else {
-        setError(err.response?.data?.message || "Registration failed");
+        setError(err.response?.data?.message || err.message || "Registration failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -169,6 +180,23 @@ function Register() {
                     {showPassword ? "Hide" : "Show"}
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2 font-ui">
+                  Account Type
+                </label>
+                <select
+                  id="role"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white text-gray-800"
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  required
+                >
+                  <option value="buyer">Buyer</option>
+                  <option value="farmer">Farmer</option>
+                  <option value="cooperative">Cooperative</option>
+                </select>
               </div>
             </div>
 

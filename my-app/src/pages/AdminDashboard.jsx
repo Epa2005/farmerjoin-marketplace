@@ -288,7 +288,10 @@ function AdminDashboard() {
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-medium text-gray-900 mb-4">View All Users</h3>
             <p className="text-gray-600 mb-4">Manage all system users</p>
-            <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+            <button 
+              onClick={() => navigate("/user-management")}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
               Manage Users
             </button>
           </div>

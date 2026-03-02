@@ -148,7 +148,7 @@ router.get('/profile', isCooperative, (req, res) => {
         SELECT c.*, u.full_name, u.email, u.photo as user_photo
         FROM cooperatives c
         JOIN users u ON c.user_id = u.user_id
-        WHERE c.user_id = ?
+        WHERE c.user_id = ${req.user.user_id}
     `;
     
     db.query(query, [req.user.user_id], (err, results) => {
