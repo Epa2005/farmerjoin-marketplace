@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../config/db");
+const db = require("../dbConnection");
 const auth = require("../middleware/auth");
 
 // Create Order
@@ -48,13 +48,15 @@ router.get("/my-orders", auth, (req, res) => {
       const buyerId = buyer[0].buyer_id;
 
       db.query(
-        `SELECT orders.*, order_items.quantity, order_items.price as item_price,
-                products.product_name, products.image
+        `SELECT orders.*, 
+                SUM(order_items.quantity * order_items.price) as total_amount,
+                GROUP_CONCAT(CONCAT(order_items.quantity, 'x ', products.product_name) SEPARATOR ', ') as items_summary
          FROM orders
          JOIN order_items ON orders.order_id = order_items.order_id
          JOIN products ON order_items.product_id = products.product_id
          WHERE orders.buyer_id = ?
-         ORDER BY orders.created_at DESC`,
+         GROUP BY orders.order_id
+         ORDER BY orders.order_date DESC`,
         [buyerId],
         (err, result) => {
           if (err) return res.status(500).json(err);
@@ -85,7 +87,7 @@ router.get("/farmer-orders", auth, (req, res) => {
          JOIN buyers ON orders.buyer_id = buyers.buyer_id
          JOIN users ON buyers.user_id = users.user_id
          WHERE products.farmer_id = ?
-         ORDER BY orders.created_at DESC`,
+         ORDER BY orders.order_date DESC`,
         [farmerId],
         (err, result) => {
           if (err) return res.status(500).json(err);

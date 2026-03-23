@@ -4,7 +4,7 @@ const db = mysql.createConnection({
     host: "localhost",
     user: "root",
     password: "",
-    database: "project1"
+    database: "project6"
 });
 
 db.connect(err => {
@@ -12,7 +12,7 @@ db.connect(err => {
         console.log("Database connection failed:", err);
     } else {
         console.log("Connected to project1 database");
-        
+
         // Create photo column if it doesn't exist
         db.query("ALTER TABLE users ADD COLUMN photo VARCHAR(255) DEFAULT NULL", (err, result) => {
             if (err) {
@@ -39,7 +39,7 @@ db.connect(err => {
                 CONSTRAINT fk_cooperatives_user FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
             )
         `;
-        
+
         db.query(createCooperativesTable, (err, result) => {
             if (err) {
                 console.log("Cooperatives table may already exist or table issue:", err.message);
