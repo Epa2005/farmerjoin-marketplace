@@ -1,6 +1,8 @@
-import{ useState } from "react"
+import { useState } from "react"
+import { useNewTranslation } from "../hooks/useNewTranslation"
 
 export default function Index(){
+    const { t } = useNewTranslation();
     const [name,setName] = useState("");
    function handleClickName(){
     const inputName =document.getElementById("name").value;
@@ -10,10 +12,9 @@ export default function Index(){
     return(
         <>
         <p>
-            hello ma name is {name}.</p>
+            {t('helloMyNameIs')} {name}.</p>
             <input id="name" type="text" />
             
-            <button onClick={handleClickName}>update name</button></>
+            <button onClick={handleClickName}>{t('updateName')}</button></>
     )
 }
-   

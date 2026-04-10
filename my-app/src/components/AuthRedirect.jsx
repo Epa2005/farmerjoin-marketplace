@@ -8,17 +8,37 @@ const AuthRedirect = () => {
     const token = localStorage.getItem("token");
     const user = JSON.parse(localStorage.getItem("user"));
 
+    console.log("AuthRedirect - Checking authentication:");
+    console.log("Token exists:", !!token);
+    console.log("User data:", user);
+    console.log("User role:", user?.role);
+
     if (token && user) {
       // User is logged in, redirect to appropriate dashboard
-      if (user.role === "buyer") {
+      const userRole = (user.role || "").toLowerCase();
+      
+      console.log("User role (lowercase):", userRole);
+      
+      if (userRole === "buyer") {
+        console.log("Redirecting to buyer dashboard");
         navigate("/buyer-dashboard");
-      } else if (user.role === "farmer") {
+      } else if (userRole === "farmer") {
+        console.log("Redirecting to farmer dashboard");
         navigate("/dashboard");
+      } else if (userRole === "cooperative") {
+        console.log("Redirecting to cooperative dashboard");
+        navigate("/cooperative-dashboard");
+      } else if (userRole === "admin") {
+        console.log("Redirecting to admin dashboard");
+        navigate("/admin-dashboard");
       } else {
-        navigate("/");
+        // Default to dashboard for farmers, otherwise home
+        console.log("Unknown role, defaulting to farmer dashboard");
+        navigate("/dashboard");
       }
     } else {
       // User is not logged in, redirect to home
+      console.log("User not authenticated, redirecting to home");
       navigate("/");
     }
   }, [navigate]);

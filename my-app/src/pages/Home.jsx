@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import HeroSlider from "../components/HeroSlider";
 import ImageSlideshow from "../components/ImageSlideshow";
+import { useNewTranslation } from "../hooks/useNewTranslation";
 
 const Home = () => {
+    const { t } = useNewTranslation();
     const [stats, setStats] = useState({
         users: 0,
         products: 0,
@@ -120,11 +122,14 @@ const Home = () => {
 
                 <div className="relative z-10 text-center text-white px-4 max-w-6xl mx-auto">
                     <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-4 leading-tight tracking-tight animate-fade-in-up">
-                        Connecting Farmers
-                        <span className="block text-emerald-200">Directly to Markets</span>
+                        {t('heroTitle').split(' ').map((word, index) => (
+                            <span key={index} className={index === 1 ? 'block text-emerald-200' : ''}>
+                                {word} {index === 1 && <br />}
+                            </span>
+                        ))}
                     </h1>
                     <p className="text-lg md:text-xl lg:text-2xl font-light mb-8 leading-relaxed max-w-4xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-                        Sell smarter. Buy faster. Grow together.
+                        {t('heroSubtitle')}
                     </p>
                     
                     <div className="flex flex-col sm:flex-row gap-6 justify-center animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
@@ -132,14 +137,14 @@ const Home = () => {
                             to="/register"
                             className="group relative px-12 py-5 bg-white text-emerald-600 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 overflow-hidden"
                         >
-                            <span className="relative z-10">Get Started</span>
+                            <span className="relative z-10">{t('getStarted')}</span>
                             <div className="absolute inset-0 bg-gradient-to-r from-emerald-50 to-teal-50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
                         </Link>
                         <Link
                             to="/about"
                             className="px-12 py-5 border-2 border-white text-white rounded-2xl font-bold text-lg hover:bg-white hover:text-emerald-600 transform hover:scale-105 transition-all duration-300 shadow-xl"
                         >
-                            Learn More
+                            {t('learnMore')}
                         </Link>
                     </div>
                 </div>
@@ -157,10 +162,10 @@ const Home = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                         {[
-                            { value: stats.users, label: 'Users', suffix: '+', icon: '👥' },
-                            { value: stats.products, label: 'Products', suffix: '+', icon: '🌾' },
-                            { value: stats.markets, label: 'Markets', suffix: '+', icon: '🏪' },
-                            { value: stats.satisfaction, label: 'Satisfaction', suffix: '%', icon: '⭐' }
+                            { value: stats.users, label: t('farmersCount'), suffix: '+', icon: '👥' },
+                            { value: stats.products, label: t('productsCount'), suffix: '+', icon: '🌾' },
+                            { value: stats.markets, label: t('marketsCount'), suffix: '+', icon: '🏪' },
+                            { value: stats.satisfaction, label: t('satisfactionRate'), suffix: '%', icon: '⭐' }
                         ].map((stat, index) => (
                             <div key={index} className="text-center group">
                                 <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-gray-800 dark:to-gray-700 p-6 rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border border-emerald-100 dark:border-gray-600">
@@ -186,19 +191,19 @@ const Home = () => {
                         <div className="relative">
                             <div className="absolute -top-4 -left-4 text-5xl text-red-500 dark:text-red-400">❌</div>
                             <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                                The Problem
+                                {t('theProblem')}
                             </h3>
                             <div className="space-y-3">
                                 <div className="flex items-start space-x-3">
                                     <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
                                     <p className="text-gray-700 dark:text-gray-300">
-                                        Farmers lose 30-40% of profits to middlemen
+                                        {t('farmersLoseProfits')}
                                     </p>
                                 </div>
                                 <div className="flex items-start space-x-3">
                                     <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
                                     <p className="text-gray-700 dark:text-gray-300">
-                                        Limited market access for small-scale farmers
+                                        {t('limitedMarketAccess')}
                                     </p>
                                 </div>
                             </div>
@@ -208,19 +213,19 @@ const Home = () => {
                         <div className="relative">
                             <div className="absolute -top-4 -left-4 text-5xl text-green-500 dark:text-green-400">✔</div>
                             <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                                The Solution
+                                {t('theSolution')}
                             </h3>
                             <div className="space-y-3">
                                 <div className="flex items-start space-x-3">
                                     <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
                                     <p className="text-gray-700 dark:text-gray-300">
-                                        Direct farmer-to-buyer connections eliminate middlemen
+                                        {t('directFarmerConnections')}
                                     </p>
                                 </div>
                                 <div className="flex items-start space-x-3">
                                     <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
                                     <p className="text-gray-700 dark:text-gray-300">
-                                        Transparent pricing ensures fair competition
+                                        {t('transparentPricing')}
                                     </p>
                                 </div>
                             </div>
@@ -234,10 +239,10 @@ const Home = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                            Powerful Features
+                            {t('powerfulFeatures')}
                         </h2>
                         <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                            Everything you need to succeed in modern agriculture
+                            {t('everythingYouNeed')}
                         </p>
                     </div>
 
@@ -245,26 +250,26 @@ const Home = () => {
                         {[
                             {
                                 icon: '📱',
-                                title: 'Mobile First',
-                                description: 'Access markets from anywhere with our mobile-optimized platform',
+                                title: t('mobileFirst'),
+                                description: t('mobileFirstDescription'),
                                 color: 'from-blue-500 to-cyan-500'
                             },
                             {
                                 icon: '🔒',
-                                title: 'Secure Payments',
-                                description: 'Safe and reliable payment processing for all transactions',
+                                title: t('securePayments'),
+                                description: t('securePaymentsDescription'),
                                 color: 'from-green-500 to-emerald-500'
                             },
                             {
                                 icon: '📊',
-                                title: 'Real-time Analytics',
-                                description: 'Track sales, inventory, and market trends instantly',
+                                title: t('realTimeAnalytics'),
+                                description: t('realTimeAnalyticsDescription'),
                                 color: 'from-purple-500 to-pink-500'
                             },
                             {
                                 icon: '💬',
-                                title: 'Direct Messaging',
-                                description: 'Communicate directly with buyers and sellers',
+                                title: t('directMessaging'),
+                                description: t('directMessagingDescription'),
                                 color: 'from-orange-500 to-red-500'
                             }
                         ].map((feature, index) => (
@@ -291,23 +296,23 @@ const Home = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-8">
                         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                            See It in Action
+                            {t('seeItInAction')}
                         </h2>
                         <p className="text-base text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                            Experience FarmerJoin firsthand
+                            {t('experienceFarmerJoin')}
                         </p>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
                         <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
-                                Key Benefits
+                                {t('keyBenefits')}
                             </h3>
                             <div className="space-y-2">
                                 {[
-                                    'Increase farmer income by 40%',
-                                    'Reduce post-harvest losses by 60%',
-                                    'Access to 50+ new markets'
+                                    t('increaseFarmerIncome'),
+                                    t('reducePostHarvestLosses'),
+                                    t('accessNewMarkets')
                                 ].map((benefit, index) => (
                                     <div key={index} className="flex items-center space-x-2">
                                         <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -323,16 +328,16 @@ const Home = () => {
 
                         <div className="bg-gradient-to-br from-emerald-600 to-teal-600 p-4 rounded-xl shadow-lg text-white">
                             <h3 className="text-lg font-bold mb-3">
-                                Start Your Journey
+                                {t('startYourJourney')}
                             </h3>
                             <p className="text-emerald-100 mb-3 text-sm">
-                                Join thousands of successful farmers and buyers
+                                {t('joinThousands')}
                             </p>
                             <Link
                                 to="/register"
                                 className="inline-block bg-white text-emerald-600 px-4 py-2 rounded-lg font-bold hover:bg-emerald-50 transform hover:scale-105 transition-all duration-300"
                             >
-                                Try Demo Now
+                                {t('tryDemoNow')}
                             </Link>
                         </div>
                     </div>
@@ -344,37 +349,37 @@ const Home = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                            Trusted by Farmers
+                            {t('trustedByFarmers')}
                         </h2>
                         <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                            Real stories from real users
+                            {t('realStoriesFromRealUsers')}
                         </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {[
                             {
-                                name: 'Jean Mugisha',
-                                role: 'Coffee Farmer',
-                                location: 'Northern Province',
+                                name: t('jeanMugisha'),
+                                role: t('coffeeFarmer'),
+                                location: t('northernProvince'),
                                 image: '/images/farmer1.jpg',
-                                testimonial: 'FarmerJoin helped me connect directly with buyers in Kigali. My income increased by 45% in just 6 months!',
+                                testimonial: t('jeanTestimonial'),
                                 rating: 5
                             },
                             {
-                                name: 'Grace Uwimana',
-                                role: 'Vegetable Seller',
-                                location: 'Kigali',
+                                name: t('graceUwimana'),
+                                role: t('vegetableSeller'),
+                                location: t('kigali'),
                                 image: '/images/buyer1.jpg',
-                                testimonial: 'I can now source fresh produce directly from farmers. The quality is amazing and prices are fair.',
+                                testimonial: t('graceTestimonial'),
                                 rating: 5
                             },
                             {
-                                name: 'Emmanuel Niyonzima',
-                                role: 'Cooperative Leader',
-                                location: 'Eastern Province',
+                                name: t('emmanuelNiyonzima'),
+                                role: t('cooperativeLeader'),
+                                location: t('easternProvince'),
                                 image: '/images/coop1.jpg',
-                                testimonial: 'Our cooperative scaled from 50 to 200+ farmers using FarmerJoin. It transformed our community.',
+                                testimonial: t('emmanuelTestimonial'),
                                 rating: 5
                             }
                         ].map((testimonial, index) => (
@@ -414,7 +419,7 @@ const Home = () => {
             </section>
 
             {/* Custom Styles */}
-            <style jsx>{`
+            <style jsx={true}>{`
                 @keyframes fade-in-up {
                     from {
                         opacity: 0;

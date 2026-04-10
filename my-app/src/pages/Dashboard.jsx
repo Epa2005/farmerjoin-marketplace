@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import API from "../api";
+import { useNewTranslation } from "../hooks/useNewTranslation";
 
 function Dashboard() {
+    const { t } = useNewTranslation();
     const [user, setUser] = useState(null);
     const [stats, setStats] = useState({
         products: 0,
@@ -22,12 +24,9 @@ function Dashboard() {
     const [message, setMessage] = useState("");
 
     useEffect(() => {
-        // Get user info from localStorage or API
         const token = localStorage.getItem("token");
         if (token) {
-            // User is logged in - fetch user data
-            setUser({ name: "Admin" }); // Placeholder - would fetch from API
-            // Fetch farmers list
+            setUser({ name: "Admin" });
             fetchFarmers();
         }
     }, []);
@@ -41,7 +40,6 @@ function Dashboard() {
             setFarmers(response.data || []);
         } catch (error) {
             console.error("Error fetching farmers:", error);
-            // For demo, set empty array
             setFarmers([]);
         }
     };
@@ -57,7 +55,7 @@ function Dashboard() {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            setMessage(`Farmer account created! Email: ${newFarmer.email}, Password: ${response.data.password}`);
+            setMessage(t('farmerAccountCreated') || `Farmer account created! Email: ${newFarmer.email}, Password: ${response.data.password}`);
             setNewFarmer({
                 full_name: "",
                 email: "",
@@ -66,9 +64,9 @@ function Dashboard() {
                 location: ""
             });
             setShowAddFarmer(false);
-            fetchFarmers(); // Refresh farmers list
+            fetchFarmers();
         } catch (error) {
-            setMessage("Error creating farmer account. Please try again.");
+            setMessage(t('errorCreatingFarmer') || "Error creating farmer account. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -80,10 +78,10 @@ function Dashboard() {
                 {/* Welcome Header */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-800">
-                        Admin Dashboard
+                        {t('adminDashboard') || 'Admin Dashboard'}
                     </h1>
                     <p className="mt-2 text-gray-600">
-                        Manage products, orders, and farmer accounts
+                        {t('manageProductsOrdersFarmers') || 'Manage products, orders, and farmer accounts'}
                     </p>
                 </div>
 
@@ -98,7 +96,7 @@ function Dashboard() {
                                 </svg>
                             </div>
                             <div className="ml-4">
-                                <p className="text-sm font-medium text-gray-500">Total Products</p>
+                                <p className="text-sm font-medium text-gray-500">{t('totalProducts') || 'Total Products'}</p>
                                 <p className="text-2xl font-semibold text-gray-800">{stats.products}</p>
                             </div>
                         </div>
@@ -107,12 +105,12 @@ function Dashboard() {
                     {/* Manage Farmers Section */}
                     <div className="bg-white rounded-xl shadow-md p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-semibold text-gray-800">Manage Farmers</h2>
+                            <h2 className="text-xl font-semibold text-gray-800">{t('manageFarmers') || 'Manage Farmers'}</h2>
                             <button
                                 onClick={() => setShowAddFarmer(!showAddFarmer)}
                                 className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
                             >
-                                {showAddFarmer ? 'Cancel' : 'Add Farmer'}
+                                {showAddFarmer ? (t('cancel') || 'Cancel') : (t('addFarmer') || 'Add Farmer')}
                             </button>
                         </div>
 
@@ -127,7 +125,7 @@ function Dashboard() {
 
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('fullName') || 'Full Name'}</label>
                                         <input
                                             type="text"
                                             value={newFarmer.full_name}
@@ -137,7 +135,7 @@ function Dashboard() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('email') || 'Email'}</label>
                                         <input
                                             type="email"
                                             value={newFarmer.email}
@@ -150,7 +148,7 @@ function Dashboard() {
 
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('phone') || 'Phone'}</label>
                                         <input
                                             type="tel"
                                             value={newFarmer.phone}
@@ -160,7 +158,7 @@ function Dashboard() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Cooperative Name</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('cooperativeName') || 'Cooperative Name'}</label>
                                         <input
                                             type="text"
                                             value={newFarmer.cooperative_name}
@@ -172,7 +170,7 @@ function Dashboard() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('location') || 'Location'}</label>
                                     <input
                                         type="text"
                                         value={newFarmer.location}
@@ -188,7 +186,7 @@ function Dashboard() {
                                         disabled={loading}
                                         className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
                                     >
-                                        {loading ? 'Creating...' : 'Create Account'}
+                                        {loading ? (t('creating') || 'Creating...') : (t('createAccount') || 'Create Account')}
                                     </button>
                                 </div>
                             </form>
@@ -253,16 +251,7 @@ function Dashboard() {
                 <div className="bg-white rounded-xl shadow-md p-6">
                     <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <Link
-                            to="/add-product"
-                            className="flex flex-col items-center justify-center p-6 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
-                        >
-                            <svg className="h-8 w-8 text-primary-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            <span className="text-sm font-medium text-primary-700">Add Product</span>
-                        </Link>
-
+                        
                         <Link
                             to="/products"
                             className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"

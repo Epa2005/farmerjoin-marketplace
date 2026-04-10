@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useNewTranslation } from '../hooks/useNewTranslation';
 
 const CartIcon = () => {
   const { getCartItemsCount } = useCart();
+  const { t } = useNewTranslation();
   const itemCount = getCartItemsCount();
 
   return (

@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
 import API from "../api";
 import { useNavigate } from "react-router-dom";
+import { useNewTranslation } from "../hooks/useNewTranslation";
+import { useDatabaseTranslation } from "../hooks/useDatabaseTranslation";
 
 function AdminDashboard() {
   const navigate = useNavigate();
+  const { t } = useNewTranslation();
+  const { translateUserRole, formatDate, useTranslatedUsers } = useDatabaseTranslation();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalFarmers: 0,
@@ -12,6 +16,7 @@ function AdminDashboard() {
     totalOrders: 0
   });
   const [farmers, setFarmers] = useState([]);
+  const translatedFarmers = useTranslatedUsers(farmers);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -19,11 +24,18 @@ function AdminDashboard() {
     full_name: "",
     email: "",
     phone: "",
+    password: "",
     cooperative_name: "",
     location: "",
     role: "farmer"
   });
   const [creating, setCreating] = useState(false);
+
+  // ML Question State
+  const [question, setQuestion] = useState("");
+  const [response, setResponse] = useState("");
+  const [questionLoading, setQuestionLoading] = useState(false);
+  const [questionHistory, setQuestionHistory] = useState([]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -63,7 +75,7 @@ function AdminDashboard() {
 
     } catch (err) {
       console.error("Dashboard error:", err);
-      setError("Failed to load dashboard data");
+      setError(t('failedToLoadDashboard'));
     } finally {
       setLoading(false);
     }
@@ -89,13 +101,13 @@ function AdminDashboard() {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        alert(`Farmer account created successfully!\nEmail: ${createForm.email}\nPassword: ${response.data.password}`);
+        alert(`${t('farmerAccountCreated')}\n${t('emailLabel')}: ${createForm.email}\n${t('passwordLabel')}: ${createForm.password}`);
       } else if (createForm.role === "cooperative") {
         response = await API.post("/cooperative/admin/create-cooperative", createForm, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        alert(`Cooperative account created successfully!\nEmail: ${createForm.email}\nPassword: ${response.data.password}`);
+        alert(`${t('cooperativeAccountCreated')}\n${t('emailLabel')}: ${createForm.email}\n${t('passwordLabel')}: ${createForm.password}`);
       }
       
       // Reset form and close modal
@@ -103,6 +115,7 @@ function AdminDashboard() {
         full_name: "",
         email: "",
         phone: "",
+        password: "",
         cooperative_name: "",
         location: "",
         role: "farmer"
@@ -114,9 +127,63 @@ function AdminDashboard() {
       
     } catch (err) {
       console.error("Create account error:", err);
-      setError(err?.response?.data?.message || "Failed to create account");
+      setError(err?.response?.data?.message || t('failedToCreateAccount'));
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleAskQuestion = async (e) => {
+    e.preventDefault();
+    if (!question.trim()) return;
+
+    setQuestionLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await API.post("/ml/ask-question", 
+        { 
+          question: question.trim(),
+          context: "admin_dashboard",
+          language: "en" // Admin dashboard primarily in English
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (res.data.success) {
+        setResponse(res.data.data.response);
+        
+        // Show language detection info in console for debugging
+        console.log('Admin Dashboard Language Detection:', {
+          detected: res.data.data.detectedLanguage,
+          responseLanguage: res.data.data.language,
+          question: question.trim()
+        });
+        
+        setQuestionHistory(prev => [
+          { 
+            question: question.trim(), 
+            response: res.data.data.response, 
+            timestamp: new Date(),
+            detectedLanguage: res.data.data.detectedLanguage,
+            responseLanguage: res.data.data.language,
+            learning: res.data.data.learning
+          },
+          ...prev
+        ]);
+        setQuestion("");
+      }
+    } catch (err) {
+      console.error("Error asking question:", err);
+      // Fallback response if ML endpoint fails
+      if (err.response?.status === 404) {
+        setResponse("AI assistant is currently unavailable. Please try again later or contact support.");
+      } else {
+        setResponse("Sorry, I couldn't process your question. Please try again.");
+      }
+    } finally {
+      setQuestionLoading(false);
     }
   };
 
@@ -135,15 +202,15 @@ function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{t('adminDashboard')}</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Welcome, Admin</span>
+              <span className="text-sm text-gray-600">{t('welcomeAdmin')}</span>
               <button
                 onClick={handleLogout}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
-                Logout
+                {t('logout')}
               </button>
             </div>
           </div>
@@ -167,7 +234,7 @@ function AdminDashboard() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Users</p>
+                <p className="text-sm font-medium text-gray-600">{t('totalUsers')}</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
               </div>
             </div>
@@ -181,7 +248,7 @@ function AdminDashboard() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Farmers</p>
+                <p className="text-sm font-medium text-gray-600">{t('farmers')}</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalFarmers}</p>
               </div>
             </div>
@@ -195,7 +262,7 @@ function AdminDashboard() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Buyers</p>
+                <p className="text-sm font-medium text-gray-600">{t('buyers')}</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalBuyers}</p>
               </div>
             </div>
@@ -209,7 +276,7 @@ function AdminDashboard() {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Products</p>
+                <p className="text-sm font-medium text-gray-600">{t('products')}</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.totalProducts}</p>
               </div>
             </div>
@@ -219,34 +286,34 @@ function AdminDashboard() {
         {/* Farmers Table */}
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Farmers</h3>
+            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">{t('recentFarmers')}</h3>
             
             {farmers.length === 0 ? (
-              <p className="text-gray-500">No farmers found</p>
+              <p className="text-gray-500">{t('noFarmersFound')}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
+                        {t('name')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Email
+                        {t('email')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Phone
+                        {t('phone')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Location
+                        {t('location')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Joined
+                        {t('joined')}
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {farmers.slice(0, 5).map((farmer) => (
+                    {translatedFarmers.slice(0, 5).map((farmer) => (
                       <tr key={farmer.farmer_id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {farmer.full_name}
@@ -258,10 +325,10 @@ function AdminDashboard() {
                           {farmer.phone}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {farmer.location || 'Not specified'}
+                          {farmer.location || t('notSpecified')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(farmer.created_at).toLocaleDateString()}
+                          {farmer.created_at_formatted}
                         </td>
                       </tr>
                     ))}
@@ -272,35 +339,154 @@ function AdminDashboard() {
           </div>
         </div>
 
+        {/* ML Question Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Question Input */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">🤖 Ask AI Assistant</h3>
+            <form onSubmit={handleAskQuestion} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ask about system management, analytics, or insights
+                </label>
+                <textarea
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  placeholder="e.g., How many users are active? What are the top selling products?"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows="4"
+                  disabled={questionLoading}
+                />
+                <div className="mt-2 text-xs text-gray-500">
+                  {question.length}/500 characters
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={questionLoading || !question.trim()}
+                className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {questionLoading ? "Processing..." : "Ask Question"}
+              </button>
+            </form>
+          </div>
+
+          {/* Response Display */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">💡 AI Response</h3>
+            {response ? (
+              <div className="space-y-4">
+                {questionHistory.length > 0 && questionHistory[0].detectedLanguage === 'rw' && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      <span className="text-xs font-medium text-green-800">
+                        🇷🇼 Kinyarwanda Detected - Responding in Kinyarwanda
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-800">{response}</p>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {new Date().toLocaleString()}
+                  {questionHistory.length > 0 && (
+                    <span className="ml-2">
+                      • Language: {questionHistory[0].responseLanguage === 'rw' ? '🇷🇼 Kinyarwanda' : '🇺🇸 English'}
+                    </span>
+                  )}
+                  {questionHistory.length > 0 && questionHistory[0].learning && (
+                    <span className="ml-2">
+                      • Confidence: {Math.round(questionHistory[0].learning.confidence * 100)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <div className="w-12 h-12 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
+                </div>
+                <p>Ask a question to see AI response here</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Question History */}
+        {questionHistory.length > 0 && (
+          <div className="bg-white p-6 rounded-lg shadow mb-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">📝 Question History</h3>
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {questionHistory.map((item, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-3">
+                  <div className="flex items-start space-x-2">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-bold text-blue-600">
+                      Q
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-900">{item.question}</p>
+                        {item.detectedLanguage === 'rw' && (
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                            🇷🇼 Kinyarwanda
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">{item.response}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-xs text-gray-500">{item.timestamp.toLocaleString()}</p>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-500">
+                            Language: {item.responseLanguage === 'rw' ? '🇷🇼' : '🇺🇸'}
+                          </span>
+                          {item.learning && (
+                            <span className="text-xs text-gray-500">
+                              • {Math.round(item.learning.confidence * 100)}% confidence
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Quick Actions */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Create Farmer Account</h3>
-            <p className="text-gray-600 mb-4">Create a new farmer account manually</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">{t('createFarmerAccount')}</h3>
+            <p className="text-gray-600 mb-4">{t('createFarmerDescription')}</p>
             <button 
               onClick={() => setShowCreateModal(true)}
               className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
             >
-              Create {createForm.role === "cooperative" ? "Cooperative" : "Farmer"}
+              {t(createForm.role === "cooperative" ? "createCooperative" : "createFarmer")}
             </button>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">View All Users</h3>
-            <p className="text-gray-600 mb-4">Manage all system users</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">{t('viewAllUsers')}</h3>
+            <p className="text-gray-600 mb-4">{t('manageUsersDescription')}</p>
             <button 
               onClick={() => navigate("/user-management")}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
             >
-              Manage Users
+              {t('manageUsers')}
             </button>
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">System Settings</h3>
-            <p className="text-gray-600 mb-4">Configure system settings</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">{t('systemSettings')}</h3>
+            <p className="text-gray-600 mb-4">{t('systemSettingsDescription')}</p>
             <button className="w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-              Settings
+              {t('settings')}
             </button>
           </div>
         </div>
@@ -312,7 +498,7 @@ function AdminDashboard() {
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-lg bg-white">
             <div className="mt-3">
               <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              Create {createForm.role === "cooperative" ? "Cooperative" : "Farmer"} Account
+              {t(createForm.role === "cooperative" ? "createCooperativeAccountTitle" : "createFarmerAccountTitle")}
             </h3>
               
               {error && (
@@ -323,75 +509,88 @@ function AdminDashboard() {
 
               <form onSubmit={handleCreateAccount} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('fullName')}</label>
                   <input
                     type="text"
                     required
                     value={createForm.full_name}
                     onChange={(e) => setCreateForm({...createForm, full_name: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder={`Enter ${createForm.role === "cooperative" ? "cooperative" : "farmer"}'s full name`}
+                    placeholder={t(createForm.role === "cooperative" ? "enterCooperativeFullName" : "enterFullName")}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('email')}</label>
                   <input
                     type="email"
                     required
                     value={createForm.email}
                     onChange={(e) => setCreateForm({...createForm, email: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder={`${createForm.role === "cooperative" ? "cooperative" : "farmer"}@example.com`}
+                    placeholder={t(createForm.role === "cooperative" ? "enterCooperativeEmail" : "enterEmail")}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('phone')}</label>
                   <input
                     type="tel"
                     required
                     value={createForm.phone}
                     onChange={(e) => setCreateForm({...createForm, phone: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="+250788123456"
+                    placeholder={t('enterPhone')}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Cooperative Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('password')}</label>
+                  <input
+                    type="password"
+                    required
+                    value={createForm.password}
+                    onChange={(e) => setCreateForm({...createForm, password: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder={t('enterPassword')}
+                    minLength="6"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('cooperativeName')}</label>
                   <input
                     type="text"
                     required
                     value={createForm.cooperative_name}
                     onChange={(e) => setCreateForm({...createForm, cooperative_name: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="Cooperative or Farm Name"
+                    placeholder={t('cooperativeOrFarmName')}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('location')}</label>
                   <input
                     type="text"
                     required
                     value={createForm.location}
                     onChange={(e) => setCreateForm({...createForm, location: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="District, Province"
+                    placeholder={t('districtProvince')}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Account Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('accountType')}</label>
                   <select
                     value={createForm.role}
                     onChange={(e) => setCreateForm({...createForm, role: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     required
                   >
-                    <option value="farmer">Farmer</option>
-                    <option value="cooperative">Cooperative</option>
+                    <option value="farmer">{t('farmer')}</option>
+                    <option value="cooperative">{t('cooperative')}</option>
                   </select>
                 </div>
 
@@ -404,14 +603,14 @@ function AdminDashboard() {
                     }}
                     className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
                   >
-                    Cancel
+                    {t('cancel')}
                   </button>
                   <button
                     type="submit"
                     disabled={creating}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
                   >
-                    {creating ? "Creating..." : "Create Account"}
+                    {creating ? t('creating') : t('createAccount')}
                   </button>
                 </div>
               </form>

@@ -1,37 +1,66 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useNewTranslation } from "../hooks/useNewTranslation";
 
 const Footer = () => {
+    const { t } = useNewTranslation();
     
     return (
-        <footer className="bg-gray-800 text-white">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white relative overflow-hidden">
+            {/* Modern Background Elements */}
+            <div className="absolute inset-0">
+                <div className="absolute top-0 left-0 w-64 h-64 bg-primary-600/10 rounded-full filter blur-3xl"></div>
+                <div className="absolute bottom-0 right-0 w-64 h-64 bg-teal-600/10 rounded-full filter blur-3xl"></div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
                     {/* Company Info */}
                     <div className="col-span-1 md:col-span-2">
-                        <h3 className="text-2xl font-heading font-bold text-primary-500 mb-4 tracking-tight">FarmerJoin</h3>
-                        <p className="text-gray-300 mb-4 font-secondary leading-relaxed">
-                            Connecting farmers directly with buyers. Fresh produce at fair prices.
+                        <div className="flex items-center space-x-3 mb-6">
+                            <div className="w-12 h-12 bg-gradient-to-r from-primary-600 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <span className="text-2xl">grass</span>
+                            </div>
+                            <h3 className="text-3xl font-bold text-white">FarmerJoin</h3>
+                        </div>
+                        <p className="text-gray-300 mb-6 leading-relaxed text-lg">
+                            {t('footerDescription')}
                         </p>
+                        <div className="flex space-x-4">
+                            <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center hover:bg-primary-600 transition-colors cursor-pointer">
+                                <span className="text-sm">f</span>
+                            </div>
+                            <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center hover:bg-primary-600 transition-colors cursor-pointer">
+                                <span className="text-sm">t</span>
+                            </div>
+                            <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center hover:bg-primary-600 transition-colors cursor-pointer">
+                                <span className="text-sm">in</span>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Quick Links */}
                     <div>
-                        <h4 className="text-lg font-heading font-semibold mb-4 tracking-tight">Quick Links</h4>
-                        <ul className="space-y-2">
+                        <h4 className="text-xl font-bold text-white mb-6">{t('quickLinks')}</h4>
+                        <ul className="space-y-3">
                             <li>
-                                <Link to="/" className="text-gray-300 hover:text-primary-500 transition-colors">
-                                    Products
+                                <Link to="/" className="text-gray-300 hover:text-primary-400 transition-all duration-300 hover:translate-x-1 block">
+                                    {t('products')}
                                 </Link>
                             </li>
                             <li>
-                                <Link to="/login" className="text-gray-300 hover:text-primary-500 transition-colors">
-                                    Login
+                                <Link to="/login" className="text-gray-300 hover:text-primary-400 transition-all duration-300 hover:translate-x-1 block">
+                                    {t('login')}
                                 </Link>
                             </li>
                             <li>
-                                <Link to="/dashboard" className="text-gray-300 hover:text-primary-500 transition-colors">
-                                    Dashboard
+                                <Link to="/dashboard" className="text-gray-300 hover:text-primary-400 transition-all duration-300 hover:translate-x-1 block">
+                                    {t('dashboard')}
+                                </Link>
+                            </li>
+                            <li>
+                                <Link to="/about" className="text-gray-300 hover:text-primary-400 transition-all duration-300 hover:translate-x-1 block">
+                                    {t('about')}
                                 </Link>
                             </li>
                         </ul>
@@ -39,26 +68,32 @@ const Footer = () => {
 
                     {/* Contact */}
                     <div>
-                        <h4 className="text-lg font-heading font-semibold mb-4 tracking-tight">Contact Us</h4>
-                        <ul className="space-y-2 text-gray-300">
-                            <li className="flex items-center space-x-2">
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                </svg>
-                                <span>support@farmerjoin.com</span>
+                        <h4 className="text-xl font-bold text-white mb-6">{t('contactUs')}</h4>
+                        <ul className="space-y-4 text-gray-300">
+                            <li className="flex items-center space-x-3 hover:text-primary-400 transition-colors cursor-pointer">
+                                <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+                                    <span className="text-sm">@</span>
+                                </div>
+                                <span>{t('supportEmail')}</span>
                             </li>
-                            <li className="flex items-center space-x-2">
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                </svg>
-                                <span>+1 (555) 123-4567</span>
+                            <li className="flex items-center space-x-3 hover:text-primary-400 transition-colors cursor-pointer">
+                                <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+                                    <span className="text-sm">phone</span>
+                                </div>
+                                <span>{t('phone')}</span>
+                            </li>
+                            <li className="flex items-center space-x-3 hover:text-primary-400 transition-colors cursor-pointer">
+                                <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+                                    <span className="text-sm">loc</span>
+                                </div>
+                                <span>{t('location')}</span>
                             </li>
                         </ul>
                     </div>
                 </div>
 
-                <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-                    <p>&copy; 2024 FarmerJoin. All rights reserved.</p>
+                <div className="border-t border-gray-700 mt-12 pt-8 text-center">
+                    <p className="text-gray-400">{t('copyright')}</p>
                 </div>
             </div>
         </footer>

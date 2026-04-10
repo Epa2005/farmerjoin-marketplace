@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNewTranslation } from '../hooks/useNewTranslation';
 
 const GlassMorphismButton = ({ 
   children, 
@@ -6,10 +7,12 @@ const GlassMorphismButton = ({
   onClick, 
   disabled = false, 
   loading = false,
-  loadingText = "Loading...",
+  loadingText,
   className = "",
   variant = "primary"
 }) => {
+  const { t } = useNewTranslation();
+  const finalLoadingText = loadingText || t('loading');
   const baseClasses = "w-full flex justify-center items-center py-3 px-6 border border-transparent rounded-xl shadow-xl text-base font-semibold transition-all duration-300 transform hover:scale-105 font-ui backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed";
   
   const variants = {
@@ -49,7 +52,7 @@ const GlassMorphismButton = ({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             ></path>
           </svg>
-          {loadingText}
+          {finalLoadingText}
         </span>
       ) : (
         children

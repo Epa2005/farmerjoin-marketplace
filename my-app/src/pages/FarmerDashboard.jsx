@@ -1,325 +1,561 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import API from '../api';
-import Footer from '../components/Footer';
 
 const FarmerDashboard = () => {
-  const navigate = useNavigate();
-  const [farmerData, setFarmerData] = useState(null);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [earnings, setEarnings] = useState({ total: 0, monthly: 0, growth: 0 });
-  const [weather, setWeather] = useState({ temp: 22, condition: 'Sunny', forecast: [] });
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [farmerData, setFarmerData] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showAddStockModal, setShowAddStockModal] = useState(false);
+  const [stockProduct, setStockProduct] = useState(null);
+  const [stockQuantity, setStockQuantity] = useState(1);
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [priceProduct, setPriceProduct] = useState(null);
+  const [newPrice, setNewPrice] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [sortBy, setSortBy] = useState('name');
+  const wsRef = useRef(null);
 
   useEffect(() => {
-    fetchDashboardData();
-    initializeWeather();
-    initializeNotifications();
-  }, []);
+    // Check authentication
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    if (!token || !user) {
+      window.location.href = '/login';
+      return;
+    }
 
-  // Scroll progress indicator
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const scrollPercent = (scrollTop / docHeight) * 100;
-      setScrollProgress(scrollPercent);
+    // Allow both farmers and cooperatives to access this dashboard
+    if (user.role !== 'farmer' && user.role !== 'cooperative') {
+      // Redirect to appropriate dashboard for other roles
+      if (user.role === "buyer") {
+        window.location.href = '/buyer-dashboard';
+      } else if (user.role === "admin") {
+        window.location.href = '/admin-dashboard';
+      } else {
+        window.location.href = '/login';
+      }
+      return;
+    }
+
+    // Fetch farmer data
+    fetchFarmerData(token);
+    fetchProducts(token);
+    fetchOrders(token);
+    fetchNotifications(token);
+    
+    // Setup WebSocket for real-time notifications
+    setupWebSocket(token);
+
+    // Ensure loading state is set to false after initial data fetch attempts
+    Promise.all([
+      fetchFarmerData(token),
+      fetchProducts(token),
+      fetchOrders(token),
+      fetchNotifications(token)
+    ]).catch(() => {
+      // Even if some requests fail, ensure loading is set to false
+      setLoading(false);
+    });
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchFarmerData = async (token) => {
     try {
-      const token = localStorage.getItem('token');
+      const res = await API.get('/farmer/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setFarmerData(res.data);
+    } catch (err) {
+      console.error('Error fetching farmer data:', err);
+      // Set farmerData from localStorage as fallback
       const user = JSON.parse(localStorage.getItem('user'));
-      
-      if (!token || (user?.role !== 'farmer' && user?.role !== 'cooperative')) {
-        navigate('/login');
-        return;
+      if (user) {
+        setFarmerData({
+          full_name: user.full_name,
+          email: user.email,
+          created_at: user.created_at || new Date().toISOString()
+        });
       }
+    }
+  };
 
-      // Fetch profile based on user role
-      let profileRes;
-      if (user.role === 'farmer') {
-        profileRes = await API.get('/farmer/profile');
-        setFarmerData(profileRes.data);
-      } else if (user.role === 'cooperative') {
-        profileRes = await API.get('/cooperative/profile');
-        setFarmerData(profileRes.data);
-      }
-
-      // Fetch products
-      const productsRes = await API.get('/products');
-      // Filter products by current farmer if we have farmer data
-      const farmerProducts = profileRes?.data ? 
-        (productsRes.data || []).filter(product => product.farmer_id === profileRes.data.farmer_id) : 
-        (productsRes.data || []);
-      setProducts(farmerProducts);
-
-      // Fetch orders
-      const ordersRes = await API.get('/farmer/orders');
-      setOrders(ordersRes.data || []);
-
-      // Calculate earnings
-      calculateEarnings(ordersRes.data || []);
-
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+  const fetchProducts = async (token) => {
+    try {
+      const res = await API.get('/farmer/products', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setProducts(res.data || []);
+    } catch (err) {
+      console.error('Error fetching products:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateEarnings = (ordersData) => {
-    const totalEarnings = ordersData.reduce((sum, order) => sum + (order.total_price || 0), 0);
-    const currentMonth = new Date().getMonth();
-    const monthlyEarnings = ordersData
-      .filter(order => new Date(order.created_at).getMonth() === currentMonth)
-      .reduce((sum, order) => sum + (order.total_price || 0), 0);
+  const fetchOrders = async (token) => {
+    try {
+      const res = await API.get('/farmer/orders', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrders(res.data || []);
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+    }
+  };
+
+  const fetchNotifications = async (token) => {
+    try {
+      const res = await API.get('/farmer/notifications', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotifications(res.data || []);
+      setUnreadCount(res.data?.filter(n => !n.read).length || 0);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+    }
+  };
+
+  const setupWebSocket = (token) => {
+    // WebSocket setup for real-time notifications
+    const ws = new WebSocket(`ws://localhost:5000/ws?token=${token}`);
     
-    setEarnings({
-      total: totalEarnings,
-      monthly: monthlyEarnings,
-      growth: Math.floor(Math.random() * 30) + 10 // Mock growth percentage
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'notification') {
+        setNotifications(prev => [data.notification, ...prev]);
+        setUnreadCount(prev => prev + 1);
+      }
+    };
+    
+    wsRef.current = ws;
+  };
+
+  const markNotificationAsRead = async (notificationId) => {
+    try {
+      await API.put(`/farmer/notifications/${notificationId}/read`);
+      setNotifications(prev => 
+        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    try {
+      await API.put('/farmer/notifications/mark-all-read');
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Error marking all notifications as read:', err);
+    }
+  };
+
+  const deleteProduct = async () => {
+    if (!productToDelete) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await API.delete(`/farmer/products/${productToDelete}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setProducts(prev => prev.filter(p => p.product_id !== productToDelete));
+      setShowDeleteModal(false);
+      setProductToDelete(null);
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      alert('Failed to delete product');
+    }
+  };
+
+  const addStock = async () => {
+    if (!stockProduct || stockQuantity <= 0) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await API.put(`/farmer/products/${stockProduct.product_id}/stock`, 
+        { quantity: stockQuantity },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      
+      setProducts(prev => prev.map(p => 
+        p.product_id === stockProduct.product_id 
+          ? { ...p, quantity: p.quantity + stockQuantity }
+          : p
+      ));
+      
+      setShowAddStockModal(false);
+      setStockProduct(null);
+      setStockQuantity(1);
+    } catch (err) {
+      console.error('Error adding stock:', err);
+      alert('Failed to add stock');
+    }
+  };
+
+  const updatePrice = async () => {
+    if (!priceProduct || !newPrice || newPrice <= 0) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await API.put(`/farmer/products/${priceProduct.product_id}/price`, 
+        { price: parseFloat(newPrice) },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+      
+      setProducts(prev => prev.map(p => 
+        p.product_id === priceProduct.product_id 
+          ? { ...p, price: parseFloat(newPrice) }
+          : p
+      ));
+      
+      setShowPriceModal(false);
+      setPriceProduct(null);
+      setNewPrice('');
+    } catch (err) {
+      console.error('Error updating price:', err);
+      alert('Failed to update price');
+    }
+  };
+
+  const getProductStats = () => {
+    const activeProducts = products.filter(p => p.quantity > 0).length;
+    const outOfStock = products.filter(p => p.quantity === 0).length;
+    const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= 10).length;
+    
+    return {
+      activeProducts,
+      outOfStock,
+      lowStock,
+      totalProducts: products.length
+    };
+  };
+
+  const user = JSON.parse(localStorage.getItem('user'));
+  const isCooperative = user?.role === 'cooperative';
+  const dashboardTitle = isCooperative ? 'Cooperative Dashboard' : 'Farmer Dashboard';
+  const welcomeText = isCooperative ? 'Welcome to your cooperative' : 'Welcome to your farm';
+
+  const totalEarnings = orders.reduce((sum, order) => sum + (order.total_price || 0), 0);
+  const stats = getProductStats();
+
+  // Filter and sort products
+  const filteredProducts = products
+    .filter(product => {
+      const matchesSearch = product.product_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter = filterStatus === 'all' || 
+        (filterStatus === 'in_stock' && product.quantity > 0) ||
+        (filterStatus === 'out_of_stock' && product.quantity === 0) ||
+        (filterStatus === 'low_stock' && product.quantity > 0 && product.quantity <= 10);
+      return matchesSearch && matchesFilter;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return a.product_name.localeCompare(b.product_name);
+      if (sortBy === 'price') return a.price - b.price;
+      if (sortBy === 'stock') return b.quantity - a.quantity;
+      if (sortBy === 'date') return new Date(b.created_at) - new Date(a.created_at);
+      return 0;
     });
-  };
-
-  const initializeWeather = () => {
-    // Mock weather data
-    setWeather({
-      temp: 22,
-      condition: 'Partly Cloudy',
-      forecast: [
-        { day: 'Mon', temp: 24, condition: 'Sunny' },
-        { day: 'Tue', temp: 22, condition: 'Cloudy' },
-        { day: 'Wed', temp: 20, condition: 'Rainy' },
-        { day: 'Thu', temp: 23, condition: 'Sunny' },
-        { day: 'Fri', temp: 25, condition: 'Sunny' }
-      ]
-    });
-  };
-
-  const initializeNotifications = () => {
-    // Mock notifications
-    setNotifications([
-      { id: 1, type: 'order', message: 'New order received!', time: '2 min ago', read: false },
-      { id: 2, type: 'stock', message: 'Low stock alert: Tomatoes', time: '1 hour ago', read: false },
-      { id: 3, type: 'payment', message: 'Payment received for Order #123', time: '3 hours ago', read: true }
-    ]);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-emerald-200 border-t-emerald-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading dashboard...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark' : ''}`}>
-      {/* Scroll Progress Indicator */}
-      <div className="fixed top-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-800 z-50">
-        <div 
-          className="h-full bg-gradient-to-r from-emerald-500 to-teal-600 transition-all duration-300"
-          style={{ width: `${scrollProgress}%` }}
-        />
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 relative overflow-hidden">
+      {/* Animated Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-20 left-20 text-4xl opacity-20 animate-bounce">grass</div>
+        <div className="absolute top-20 right-20 text-4xl opacity-20 animate-bounce delay-100">sun</div>
+        <div className="absolute bottom-20 left-20 text-5xl opacity-20 animate-bounce delay-200">leaf</div>
+        <div className="absolute bottom-10 right-10 text-4xl opacity-20 animate-bounce delay-300">wind</div>
       </div>
 
-      {/* Advanced Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-lg border-b border-gray-200 dark:border-gray-700">
+      {/* Enhanced Header */}
+      <header className="relative bg-white/90 backdrop-blur-md shadow-lg border-b border-emerald-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <span className="text-2xl">🌾</span>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Farmer Dashboard</h1>
+              <div className="flex items-center space-x-3">
+                <span className="text-3xl animate-pulse">grass</span>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                  {dashboardTitle}
+                </h1>
               </div>
-              {farmerData && (
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {farmerData.full_name?.charAt(0) || 'F'}
+              
+              {/* Enhanced Farmer Session Display - Always show with fallback */}
+              <div className="group relative">
+                <div className="flex items-center space-x-3 bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-2 rounded-full border border-emerald-200 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer">
+                  <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center group-hover:animate-pulse shadow-md">
+                    <span className="text-white text-lg font-bold">
+                      {(farmerData?.full_name || user?.full_name || 'Farmer')?.charAt(0).toUpperCase()}
+                    </span>
                   </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-300">Welcome, {farmerData.full_name}</span>
+                  <div className="text-left">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-emerald-700">{farmerData?.full_name || user?.full_name || 'Farmer'}</span>
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    </div>
+                    <p className="text-xs text-emerald-600 flex items-center gap-1">
+                      <span>check-circle</span>
+                      {welcomeText}
+                    </p>
+                  </div>
+                  <span className="text-emerald-600 group-hover:rotate-180 transition-transform duration-300">
+                    chevron-down
+                  </span>
                 </div>
-              )}
+                
+                {/* Enhanced Hover Tooltip */}
+                <div className="absolute top-full mt-2 left-0 bg-white rounded-lg shadow-xl border border-emerald-200 p-4 opacity-0 group-hover:opacity-100 transition-all duration-300 z-50 pointer-events-none">
+                  <div className="text-sm">
+                    <p className="font-semibold text-gray-900 mb-1">{farmerData?.full_name || user?.full_name || 'Farmer'}</p>
+                    <p className="text-gray-600 mb-2">{farmerData?.email || user?.email || 'farmer@example.com'}</p>
+                    <div className="flex items-center gap-2 text-xs text-emerald-600">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      <span>Session Active</span>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-emerald-100">
+                      <p className="text-xs text-gray-500">Member since: {new Date(farmerData?.created_at || user?.created_at || new Date()).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div className="flex items-center space-x-4">
-              {/* Notifications */}
+              {/* Enhanced Notifications */}
               <div className="relative">
                 <button
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  className="relative p-2 text-gray-600 hover:text-emerald-600 transition-all duration-300 hover:scale-110"
                 >
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  {notifications.filter(n => !n.read).length > 0 && (
-                    <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                  <span className="text-xl">bell</span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center animate-pulse">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
                   )}
                 </button>
-                
+
+                {/* Notifications Dropdown */}
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
-                    <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                      <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-emerald-100 z-50 animate-slide-down">
+                    <div className="p-4 border-b border-emerald-100">
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-semibold text-gray-900">Notifications</h3>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={markAllNotificationsAsRead}
+                            className="text-sm text-emerald-600 hover:text-emerald-700"
+                          >
+                            Mark all as read
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="max-h-96 overflow-y-auto">
-                      {notifications.map(notification => (
-                        <div key={notification.id} className={`p-4 border-b border-gray-100 dark:border-gray-700 ${!notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                          <p className="text-sm text-gray-900 dark:text-white">{notification.message}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{notification.time}</p>
+                      {notifications.length > 0 ? (
+                        notifications.map(notification => (
+                          <div
+                            key={notification.id}
+                            className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
+                              !notification.read ? 'bg-emerald-50' : ''
+                            }`}
+                            onClick={() => markNotificationAsRead(notification.id)}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <span className="text-xl">
+                                {notification.type === 'order' ? 'package' : 
+                                 notification.type === 'order_update' ? 'file-text' : 'bell'}
+                              </span>
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-900">{notification.title}</p>
+                                <p className="text-sm text-gray-600">{notification.message}</p>
+                                <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+                              </div>
+                              {!notification.read && (
+                                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="p-8 text-center text-gray-500">
+                          <span className="text-3xl mb-2 block">bell</span>
+                          <p>No notifications</p>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Dark Mode Toggle */}
-              <button
-                onClick={() => setIsDarkMode(!isDarkMode)}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              <Link 
+                to="/add-product" 
+                className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-2 rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
-                {isDarkMode ? (
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                ) : (
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
-                )}
-              </button>
-
-              {/* Logout */}
-              <button
-                onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                grass Add Product
+              </Link>
+              
+              <button 
+                onClick={() => {
+                  localStorage.removeItem('token');
+                  localStorage.removeItem('user');
+                  window.location.href = '/login';
+                }}
+                className="btn-danger flex items-center gap-2 hover-scale"
               >
-                Logout
+                <span>Logout</span>
+                <span>log-out</span>
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
-            {[
-              { id: 'overview', label: '📊 Overview', icon: '📊' },
-              { id: 'products', label: '📦 Products', icon: '📦' },
-              { id: 'orders', label: '🛒 Orders', icon: '🛒' },
-              { id: 'earnings', label: '💰 Earnings', icon: '💰' },
-              { id: 'profile', label: '👤 Profile', icon: '👤' },
-              { id: 'weather', label: '🌤️ Weather', icon: '🌤️' }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </div>
-
-      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <div className="space-y-8">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard 
-                title="📦 Total Products" 
-                value={products.length} 
-                color="emerald"
-                trend="+12%"
-              />
-              <StatCard 
-                title="🛒 Total Orders" 
-                value={orders.length} 
-                color="blue"
-                trend="+8%"
-              />
-              <StatCard 
-                title="💰 Total Earnings" 
-                value={`$${earnings.total}`} 
-                color="green"
-                trend={`+${earnings.growth}%`}
-              />
-              <StatCard 
-                title="⏳ Pending Orders" 
-                value={orders.filter(o => o.status === 'pending').length} 
-                color="yellow"
-                trend="2 new"
-              />
-            </div>
-
-            {/* Weather Widget */}
-            <div className="bg-gradient-to-r from-blue-400 to-blue-600 rounded-xl p-6 text-white">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-xl font-bold mb-2">🌤️ Today's Weather</h3>
-                  <p className="text-3xl font-bold">{weather.temp}°C</p>
-                  <p className="text-lg">{weather.condition}</p>
-                  <p className="text-sm mt-2">Perfect for farming! 🌱</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold mb-2">5-Day Forecast</p>
-                  <div className="space-y-1">
-                    {weather.forecast.map((day, index) => (
-                      <div key={index} className="flex justify-between text-sm">
-                        <span>{day.day}</span>
-                        <span>{day.temp}°C {day.condition}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+      {/* Main Content */}
+      <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Enhanced Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="group bg-gradient-to-br from-white to-emerald-50 p-6 rounded-2xl shadow-xl border border-emerald-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
+            <div className="flex items-center justify-between mb-4 relative z-10">
+              <div>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">Active Products</h3>
+                <p className="text-xs text-emerald-600 font-semibold">Live listings</p>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
+                <span className="text-white text-xl">grass</span>
               </div>
             </div>
+            <p className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2 relative z-10">
+              {stats.activeProducts}
+            </p>
+            <div className="flex items-center gap-2 text-xs text-gray-500 relative z-10">
+              <span>trending-up</span>
+              <span>+12% this month</span>
+            </div>
+          </div>
+          
+          <div className="group bg-gradient-to-br from-white to-blue-50 p-6 rounded-2xl shadow-xl border border-blue-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
+            <div className="flex items-center justify-between mb-4 relative z-10">
+              <div>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">Total Orders</h3>
+                <p className="text-xs text-blue-600 font-semibold">Customer orders</p>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
+                <span className="text-white text-xl">package</span>
+              </div>
+            </div>
+            <p className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2 relative z-10">
+              {orders.length}
+            </p>
+            <div className="flex items-center gap-2 text-xs text-gray-500 relative z-10">
+              <span>clock</span>
+              <span>3 pending today</span>
+            </div>
+          </div>
+          
+          <div className="group bg-gradient-to-br from-white to-amber-50 p-6 rounded-2xl shadow-xl border border-amber-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
+            <div className="flex items-center justify-between mb-4 relative z-10">
+              <div>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">Total Earnings</h3>
+                <p className="text-xs text-amber-600 font-semibold">Revenue</p>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
+                <span className="text-white text-xl">dollar-sign</span>
+              </div>
+            </div>
+            <p className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent mb-2 relative z-10">
+              ${totalEarnings.toFixed(2)}
+            </p>
+            <div className="flex items-center gap-2 text-xs text-gray-500 relative z-10">
+              <span>trending-up</span>
+              <span>+8% this month</span>
+            </div>
+          </div>
 
-            {/* Recent Orders */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📋 Recent Orders</h3>
-              <div className="space-y-3">
+          <div className="group bg-gradient-to-br from-white to-purple-50 p-6 rounded-2xl shadow-xl border border-purple-100 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-105 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
+            <div className="flex items-center justify-between mb-4 relative z-10">
+              <div>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">Stock Alerts</h3>
+                <p className="text-xs text-purple-600 font-semibold">Low stock items</p>
+              </div>
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
+                <span className="text-white text-xl">alert-triangle</span>
+              </div>
+            </div>
+            <p className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2 relative z-10">
+              {stats.lowStock || 0}
+            </p>
+            <div className="flex items-center gap-2 text-xs text-gray-500 relative z-10">
+              <span>refresh-cw</span>
+              <span>Needs restocking</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Recent Orders Section */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-emerald-100 mb-8 hover:shadow-2xl transition-all duration-300">
+          <div className="px-6 py-4 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-t-2xl">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+              <span className="mr-2">file-text</span> Recent Orders
+            </h2>
+          </div>
+          <div className="p-6">
+            {orders.length === 0 ? (
+              <div className="text-center py-8">
+                <span className="text-4xl mb-2 block">package</span>
+                <p className="text-gray-500">No orders yet</p>
+                <p className="text-sm text-gray-400 mt-1">Your orders will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
                 {orders.slice(0, 5).map(order => (
-                  <div key={order.order_id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900 dark:text-white">Order #{order.order_id}</p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{order.created_at}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-emerald-600">${order.total_price || 0}</p>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
+                  <div key={order.order_id} className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all duration-300 hover:border-emerald-200">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-semibold text-gray-900">Order #{order.order_id}</p>
+                        <p className="text-sm text-gray-600">
+                          {order.buyer_name} - {new Date(order.created_at).toLocaleDateString()}
+                        </p>
+                        <p className="text-sm text-gray-700 mt-1">
+                          {order.items?.length || 0} items - ${parseFloat(order.total_price || 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        order.status === 'approved' ? 'bg-blue-100 text-blue-800' :
-                        order.status === 'shipped' ? 'bg-purple-100 text-purple-800' :
-                        'bg-green-100 text-green-800'
+                        order.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
                       }`}>
                         {order.status}
                       </span>
@@ -327,311 +563,252 @@ const FarmerDashboard = () => {
                   </div>
                 ))}
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Products Tab */}
-        {activeTab === 'products' && (
-          <div className="space-y-6">
+        {/* Enhanced Products Section */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-emerald-100 hover:shadow-2xl transition-all duration-300">
+          <div className="px-6 py-4 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-t-2xl">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">📦 Product Management</h2>
-              <div className="flex space-x-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                <span className="mr-2">grass</span> Your Products
+              </h2>
+              <div className="flex items-center space-x-4">
                 <input
                   type="text"
                   placeholder="Search products..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"
+                  className="px-3 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
                 <select
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="px-3 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
-                  <option value="all">All Categories</option>
-                  <option value="vegetables">Vegetables</option>
-                  <option value="fruits">Fruits</option>
-                  <option value="grains">Grains</option>
+                  <option value="all">All Products</option>
+                  <option value="in_stock">In Stock</option>
+                  <option value="low_stock">Low Stock</option>
+                  <option value="out_of_stock">Out of Stock</option>
                 </select>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-3 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="name">Sort by Name</option>
+                  <option value="price">Sort by Price</option>
+                  <option value="stock">Sort by Stock</option>
+                  <option value="date">Sort by Date</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div className="p-6">
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-8">
+                <span className="text-4xl mb-2 block">grass</span>
+                <p className="text-gray-500">No products found</p>
+                <p className="text-sm text-gray-400 mt-1">Add your first product to get started</p>
                 <Link
                   to="/add-product"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  className="inline-block mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
                 >
-                  ➕ Add Product
+                  Add Product
                 </Link>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map((product) => (
-                <div key={product.product_id} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-                  {product.image && (
-                    <img 
-                      src={product.image} 
-                      alt={product.product_name}
-                      className="w-full h-48 object-cover"
-                    />
-                  )}
-                  <div className="p-6">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{product.product_name}</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{product.category}</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredProducts.map(product => (
+                  <div key={product.product_id} className="group border border-emerald-100 rounded-xl p-4 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 bg-gradient-to-br from-white to-emerald-50">
+                    {/* Product Image */}
+                    <div className="mb-3 relative">
+                      {product.image || product.image_url ? (
+                        <img
+                          src={`http://localhost:5000/${product.image || product.image_url}`}
+                          alt={product.product_name || 'Product'}
+                          className="w-full h-40 object-cover rounded-lg border border-emerald-200 group-hover:border-emerald-400 transition-all duration-300"
+                          onError={(e) => {
+                            console.error('Image load error:', e);
+                            console.log('Failed image URL:', `http://localhost:5000/${product.image || product.image_url}`);
+                            console.log('Product data:', product);
+                            e.target.style.display = 'none';
+                          }}
+                          onLoad={() => {
+                            console.log('Image loaded successfully for:', product.product_name);
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg border border-emerald-200 flex items-center justify-center">
+                          <span className="text-4xl text-gray-400">🌾</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-2xl">grass</span>
+                      <div className="flex items-center space-x-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          product.quantity === 0 ? 'bg-red-100 text-red-800' :
+                          product.quantity <= 10 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {product.quantity === 0 ? 'Out of Stock' :
+                           product.quantity <= 10 ? 'Low Stock' : 'In Stock'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors">
+                      {product.product_name}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-3">{product.description}</p>
+                    
                     <div className="flex justify-between items-center mb-3">
-                      <span className="text-xl font-bold text-emerald-600">${product.price}</span>
-                      <span className={`text-sm px-2 py-1 rounded ${
-                        product.quantity > 10 ? 'bg-green-100 text-green-800' :
-                        product.quantity > 5 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        Stock: {product.quantity}
-                      </span>
+                      <span className="text-lg font-bold text-emerald-600">${product.price}</span>
+                      <span className="text-sm text-gray-500">{product.quantity} units</span>
                     </div>
+                    
                     <div className="flex space-x-2">
-                      <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm transition-colors">
-                        ✏️ Edit
+                      <button
+                        onClick={() => {
+                          setStockProduct(product);
+                          setShowAddStockModal(true);
+                        }}
+                        className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      >
+                        Add Stock
                       </button>
-                      <button className="flex-1 bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm transition-colors">
-                        🗑️ Delete
+                      <button
+                        onClick={() => {
+                          setPriceProduct(product);
+                          setNewPrice(product.price);
+                          setShowPriceModal(true);
+                        }}
+                        className="flex-1 px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
+                      >
+                        Update Price
+                      </button>
+                      <button
+                        onClick={() => {
+                          setProductToDelete(product.product_id);
+                          setShowDeleteModal(true);
+                        }}
+                        className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                      >
+                        Delete
                       </button>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Orders Tab */}
-        {activeTab === 'orders' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">🛒 Order Management</h2>
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Order ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Customer</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {orders.map((order) => (
-                      <tr key={order.order_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">#{order.order_id}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{order.customer_name}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{new Date(order.created_at).toLocaleDateString()}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-emerald-600">${order.total_price || 0}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                            order.status === 'approved' ? 'bg-blue-100 text-blue-800' :
-                            order.status === 'shipped' ? 'bg-purple-100 text-purple-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {order.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button className="text-blue-600 hover:text-blue-900 mr-2">View</button>
-                          <button className="text-green-600 hover:text-green-900">Update</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Earnings Tab */}
-        {activeTab === 'earnings' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">💰 Earnings & Analytics</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-r from-green-400 to-green-600 rounded-xl p-6 text-white">
-                <h3 className="text-lg font-semibold mb-2">Total Earnings</h3>
-                <p className="text-3xl font-bold">${earnings.total}</p>
-                <p className="text-sm mt-2">All time revenue</p>
-              </div>
-              <div className="bg-gradient-to-r from-blue-400 to-blue-600 rounded-xl p-6 text-white">
-                <h3 className="text-lg font-semibold mb-2">Monthly Earnings</h3>
-                <p className="text-3xl font-bold">${earnings.monthly}</p>
-                <p className="text-sm mt-2">This month</p>
-              </div>
-              <div className="bg-gradient-to-r from-purple-400 to-purple-600 rounded-xl p-6 text-white">
-                <h3 className="text-lg font-semibold mb-2">Growth Rate</h3>
-                <p className="text-3xl font-bold">+{earnings.growth}%</p>
-                <p className="text-sm mt-2">vs last month</p>
-              </div>
-            </div>
-
-            {/* Sales Chart Placeholder */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📈 Sales Analytics</h3>
-              <div className="h-64 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <p className="text-gray-500 dark:text-gray-400">📊 Chart.js integration coming soon...</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Profile Tab */}
-        {activeTab === 'profile' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">👤 Profile Management</h2>
-            
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-              <div className="flex items-center space-x-6 mb-6">
-                <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                  {farmerData?.full_name?.charAt(0) || 'F'}
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{farmerData?.full_name}</h3>
-                  <p className="text-gray-600 dark:text-gray-400">{farmerData?.email}</p>
-                  <p className="text-gray-600 dark:text-gray-400">{farmerData?.phone}</p>
-                  <div className="mt-2">
-                    <span className="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs rounded-full">✅ Verified Farmer</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Farm Location</label>
-                  <input
-                    type="text"
-                    defaultValue={farmerData?.location}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Farm Type</label>
-                  <input
-                    type="text"
-                    defaultValue={farmerData?.farm_type}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-              </div>
-              
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">About Your Farm</label>
-                <textarea
-                  rows={4}
-                  defaultValue={farmerData?.description}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-              
-              <div className="mt-6 flex space-x-4">
-                <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                  💾 Save Changes
-                </button>
-                <button className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-                  🖼️ Upload Photo
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Weather Tab */}
-        {activeTab === 'weather' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">🌤️ Weather & Farming Tips</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-gradient-to-r from-blue-400 to-blue-600 rounded-xl p-6 text-white">
-                <h3 className="text-xl font-bold mb-4">Current Weather</h3>
-                <div className="text-center">
-                  <p className="text-5xl font-bold mb-2">{weather.temp}°C</p>
-                  <p className="text-xl mb-4">{weather.condition}</p>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p>💨 Wind: 12 km/h</p>
-                      <p>💧 Humidity: 65%</p>
-                    </div>
-                    <div>
-                      <p>🌅 Sunrise: 6:00 AM</p>
-                      <p>🌇 Sunset: 6:30 PM</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🌱 Farming Tips</h3>
-                <div className="space-y-3">
-                  <div className="flex items-start space-x-3">
-                    <span className="text-green-500">✅</span>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Perfect day for planting vegetables</p>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <span className="text-blue-500">💧</span>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Water your crops in the morning for best results</p>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <span className="text-yellow-500">⚠️</span>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Expect rain tomorrow - prepare drainage</p>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <span className="text-purple-500">🌾</span>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Good conditions for harvesting grains</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* 5-Day Forecast */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📅 5-Day Forecast</h3>
-              <div className="grid grid-cols-5 gap-4">
-                {weather.forecast.map((day, index) => (
-                  <div key={index} className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <p className="font-semibold text-gray-900 dark:text-white mb-2">{day.day}</p>
-                    <p className="text-2xl mb-2">{day.temp}°C</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{day.condition}</p>
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Add Stock Modal */}
+      {showAddStockModal && stockProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Add Stock - {stockProduct.product_name}</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Quantity to Add</label>
+              <input
+                type="number"
+                min="1"
+                value={stockQuantity}
+                onChange={(e) => setStockQuantity(parseInt(e.target.value) || 1)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={addStock}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                Add Stock
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddStockModal(false);
+                  setStockProduct(null);
+                  setStockQuantity(1);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
-        )}
-      </main>
-      
-      {/* Footer */}
-      <Footer />
-    </div>
-  );
-};
-
-// Reusable Stat Card Component
-const StatCard = ({ title, value, color, trend }) => {
-  const colorClasses = {
-    emerald: 'from-emerald-400 to-emerald-600',
-    blue: 'from-blue-400 to-blue-600',
-    green: 'from-green-400 to-green-600',
-    yellow: 'from-yellow-400 to-yellow-600',
-    purple: 'from-purple-400 to-purple-600'
-  };
-
-  return (
-    <div className={`bg-gradient-to-r ${colorClasses[color]} rounded-xl p-6 text-white`}>
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-sm font-medium opacity-90">{title}</p>
-          <p className="text-3xl font-bold mt-2">{value}</p>
         </div>
-        <div className="text-right">
-          <span className="text-sm bg-white/20 px-2 py-1 rounded-full">{trend}</span>
+      )}
+
+      {/* Update Price Modal */}
+      {showPriceModal && priceProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Update Price - {priceProduct.product_name}</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">New Price</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newPrice}
+                onChange={(e) => setNewPrice(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={updatePrice}
+                className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                Update Price
+              </button>
+              <button
+                onClick={() => {
+                  setShowPriceModal(false);
+                  setPriceProduct(null);
+                  setNewPrice('');
+                }}
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Delete Product</h3>
+            <p className="text-gray-600 mb-6">Are you sure you want to delete this product? This action cannot be undone.</p>
+            <div className="flex space-x-3">
+              <button
+                onClick={deleteProduct}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setProductToDelete(null);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

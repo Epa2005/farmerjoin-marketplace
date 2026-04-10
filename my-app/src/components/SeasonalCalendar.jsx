@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useNewTranslation } from '../hooks/useNewTranslation';
 
 const SeasonalCalendar = () => {
+  const { t } = useNewTranslation();
   const [selectedSeason, setSelectedSeason] = useState('current');
   
   const currentMonth = new Date().getMonth() + 1;
@@ -8,47 +10,47 @@ const SeasonalCalendar = () => {
   
   const seasonalData = {
     spring: {
-      months: ['March', 'April', 'May'],
+      months: [t('march'), t('april'), t('may')],
       products: [
-        { name: 'Asparagus', icon: '🥦', description: 'Fresh spears perfect for grilling' },
-        { name: 'Spinach', icon: '🥬', description: 'Tender leaves for salads and cooking' },
-        { name: 'Radishes', icon: '🌶️', description: 'Crisp and peppery root vegetables' },
-        { name: 'Strawberries', icon: '🍓', description: 'Sweet and juicy berries' },
-        { name: 'Peas', icon: '🟢', description: 'Sweet garden peas' },
-        { name: 'Lettuce', icon: '🥗', description: 'Fresh salad greens' }
+        { name: t('asparagus'), icon: '🥦', description: t('asparagusDescription') },
+        { name: t('spinach'), icon: '🥬', description: t('spinachDescription') },
+        { name: t('radishes'), icon: '🌶️', description: t('radishesDescription') },
+        { name: t('strawberries'), icon: '🍓', description: t('strawberriesDescription') },
+        { name: t('peas'), icon: '🟢', description: t('peasDescription') },
+        { name: t('lettuce'), icon: '🥗', description: t('lettuceDescription') }
       ]
     },
     summer: {
-      months: ['June', 'July', 'August'],
+      months: [t('june'), t('july'), t('august')],
       products: [
-        { name: 'Tomatoes', icon: '🍅', description: 'Vine-ripened and flavorful' },
-        { name: 'Corn', icon: '🌽', description: 'Sweet summer corn' },
-        { name: 'Bell Peppers', icon: '🫑', description: 'Colorful and crisp' },
-        { name: 'Zucchini', icon: '🥒', description: 'Versatile summer squash' },
-        { name: 'Blueberries', icon: '🫐', description: 'Sweet antioxidant-rich berries' },
-        { name: 'Peaches', icon: '🍑', description: 'Juicy stone fruits' }
+        { name: t('tomatoes'), icon: '🍅', description: t('tomatoesDescription') },
+        { name: t('corn'), icon: '🌽', description: t('cornDescription') },
+        { name: t('bellPeppers'), icon: '🫑', description: t('bellPeppersDescription') },
+        { name: t('zucchini'), icon: '🥒', description: t('zucchiniDescription') },
+        { name: t('blueberries'), icon: '🫐', description: t('blueberriesDescription') },
+        { name: t('peaches'), icon: '🍑', description: t('peachesDescription') }
       ]
     },
     fall: {
-      months: ['September', 'October', 'November'],
+      months: [t('september'), t('october'), t('november')],
       products: [
-        { name: 'Apples', icon: '🍎', description: 'Crisp and sweet varieties' },
-        { name: 'Pumpkins', icon: '🎃', description: 'Perfect for pies and carving' },
-        { name: 'Sweet Potatoes', icon: '🍠', description: 'Nutritious root vegetables' },
-        { name: 'Brussels Sprouts', icon: '🥦', description: 'Roasted or steamed' },
-        { name: 'Grapes', icon: '🍇', description: 'Sweet wine and table grapes' },
-        { name: 'Pears', icon: '🍐', description: 'Buttery and sweet' }
+        { name: t('apples'), icon: '🍎', description: t('applesDescription') },
+        { name: t('pumpkins'), icon: '🎃', description: t('pumpkinsDescription') },
+        { name: t('sweetPotatoes'), icon: '🍠', description: t('sweetPotatoesDescription') },
+        { name: t('brusselsSprouts'), icon: '🥦', description: t('brusselsSproutsDescription') },
+        { name: t('grapes'), icon: '🍇', description: t('grapesDescription') },
+        { name: t('pears'), icon: '🍐', description: t('pearsDescription') }
       ]
     },
     winter: {
-      months: ['December', 'January', 'February'],
+      months: [t('december'), t('january'), t('february')],
       products: [
-        { name: 'Carrots', icon: '🥕', description: 'Sweet and crunchy' },
-        { name: 'Kale', icon: '🥬', description: 'Nutritious winter greens' },
-        { name: 'Citrus', icon: '🍊', description: 'Oranges and lemons' },
-        { name: 'Beets', icon: '🍓', description: 'Earthy and sweet' },
-        { name: 'Cabbage', icon: '🥬', description: 'Versatile for cooking' },
-        { name: 'Onions', icon: '🧅', description: 'Essential cooking base' }
+        { name: t('carrots'), icon: '🥕', description: t('carrotsDescription') },
+        { name: t('kale'), icon: '🥬', description: t('kaleDescription') },
+        { name: t('citrus'), icon: '🍊', description: t('citrusDescription') },
+        { name: t('beets'), icon: '🍓', description: t('beetsDescription') },
+        { name: t('cabbage'), icon: '🥬', description: t('cabbageDescription') },
+        { name: t('onions'), icon: '🧅', description: t('onionsDescription') }
       ]
     }
   };

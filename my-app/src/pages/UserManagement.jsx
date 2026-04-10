@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import API from "../api";
 import { useNavigate } from "react-router-dom";
+import { useNewTranslation } from "../hooks/useNewTranslation";
 
 function UserManagement() {
+  const { t } = useNewTranslation();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);

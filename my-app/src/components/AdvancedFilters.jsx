@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNewTranslation } from '../hooks/useNewTranslation';
 
 const AdvancedFilters = ({ 
   categories, 
@@ -8,6 +9,7 @@ const AdvancedFilters = ({
   priceRange,
   onPriceRangeChange 
 }) => {
+  const { t } = useNewTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleFilterToggle = (filterType, value) => {
@@ -31,14 +33,14 @@ const AdvancedFilters = ({
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
+        <h3 className="text-lg font-semibold text-gray-800">{t('filters')}</h3>
         <div className="flex items-center space-x-2">
           {hasActiveFilters && (
             <button
               onClick={onClearFilters}
               className="text-sm text-red-600 hover:text-red-700 font-medium"
             >
-              Clear All
+              {t('clearAll')}
             </button>
           )}
           <button
@@ -93,7 +95,7 @@ const AdvancedFilters = ({
         <div className="space-y-6">
           {/* Price Range */}
           <div>
-            <h4 className="font-medium text-gray-700 mb-3">Price Range</h4>
+            <h4 className="font-medium text-gray-700 mb-3">{t('priceRange')}</h4>
             <div className="space-y-3">
               <div className="flex items-center space-x-4">
                 <input
@@ -122,7 +124,7 @@ const AdvancedFilters = ({
 
           {/* Categories */}
           <div>
-            <h4 className="font-medium text-gray-700 mb-3">Categories</h4>
+            <h4 className="font-medium text-gray-700 mb-3">{t('categories')}</h4>
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {categories.map(category => (
                 <label key={category} className="flex items-center">

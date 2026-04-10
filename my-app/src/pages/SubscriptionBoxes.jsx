@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useNewTranslation } from '../hooks/useNewTranslation';
 
 const SubscriptionBoxes = () => {
+  const { t } = useNewTranslation();
   const [selectedBox, setSelectedBox] = useState(null);
   const [deliveryFrequency, setDeliveryFrequency] = useState('weekly');
 
@@ -57,11 +59,10 @@ const SubscriptionBoxes = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-800 mb-4">
-            🌾 Farm-to-Door Subscription Boxes
+            {t('farmToDoorSubscription') || '🌾 Farm-to-Door Subscription Boxes'}
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Get fresh, seasonal produce delivered directly from local farms to your doorstep. 
-            Support local farmers while enjoying the best of each season's harvest.
+            {t('subscriptionDescription') || 'Get fresh, seasonal produce delivered directly from local farms to your doorstep. Support local farmers while enjoying the best of each season\'s harvest.'}
           </p>
         </div>
 
@@ -73,8 +74,8 @@ const SubscriptionBoxes = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="font-semibold text-gray-800">100% Fresh</h3>
-            <p className="text-sm text-gray-600">Harvested within 24 hours</p>
+            <h3 className="font-semibold text-gray-800">{t('fresh100') || '100% Fresh'}</h3>
+            <p className="text-sm text-gray-600">{t('harvested24Hours') || 'Harvested within 24 hours'}</p>
           </div>
           <div className="text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -82,8 +83,8 @@ const SubscriptionBoxes = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="font-semibold text-gray-800">Great Value</h3>
-            <p className="text-sm text-gray-600">Save up to 25% vs retail</p>
+            <h3 className="font-semibold text-gray-800">{t('greatValue') || 'Great Value'}</h3>
+            <p className="text-sm text-gray-600">{t('saveUpTo25') || 'Save up to 25% vs retail'}</p>
           </div>
           <div className="text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -91,8 +92,8 @@ const SubscriptionBoxes = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="font-semibold text-gray-800">Support Local</h3>
-            <p className="text-sm text-gray-600">Direct farm partnerships</p>
+            <h3 className="font-semibold text-gray-800">{t('supportLocal') || 'Support Local'}</h3>
+            <p className="text-sm text-gray-600">{t('directFarmPartnerships') || 'Direct farm partnerships'}</p>
           </div>
           <div className="text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -100,14 +101,14 @@ const SubscriptionBoxes = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </div>
-            <h3 className="font-semibold text-gray-800">Flexible</h3>
-            <p className="text-sm text-gray-600">Pause or cancel anytime</p>
+            <h3 className="font-semibold text-gray-800">{t('flexible') || 'Flexible'}</h3>
+            <p className="text-sm text-gray-600">{t('pauseCancelAnytime') || 'Pause or cancel anytime'}</p>
           </div>
         </div>
 
         {/* Delivery Frequency */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Choose Delivery Frequency</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">{t('chooseDeliveryFrequency') || 'Choose Delivery Frequency'}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {frequencyOptions.map(option => (
               <label key={option.value} className="relative">
@@ -127,7 +128,7 @@ const SubscriptionBoxes = () => {
                   <div className="flex justify-between items-center">
                     <span className="font-medium text-gray-800">{option.label}</span>
                     {option.discount !== '0%' && (
-                      <span className="text-green-600 font-semibold">{option.discount} off</span>
+                      <span className="text-green-600 font-semibold">{option.discount} {t('off') || 'off'}</span>
                     )}
                   </div>
                 </div>
@@ -147,7 +148,7 @@ const SubscriptionBoxes = () => {
             >
               {box.popular && (
                 <div className="absolute top-0 right-0 bg-green-600 text-white px-3 py-1 text-sm font-semibold">
-                  Most Popular
+                  {t('mostPopular') || 'Most Popular'}
                 </div>
               )}
               
@@ -163,12 +164,12 @@ const SubscriptionBoxes = () => {
                     ${calculatePrice(box.price, deliveryFrequency)}
                   </div>
                   <div className="text-sm text-gray-500">
-                    per delivery • Save {box.savings}
+                    {t('perDelivery') || 'per delivery'} • {t('save') || 'Save'} {box.savings}
                   </div>
                 </div>
 
                 <div className="mb-6">
-                  <h4 className="font-medium text-gray-800 mb-2">What's Inside:</h4>
+                  <h4 className="font-medium text-gray-800 mb-2">{t('whatsInside') || "What's Inside:"}</h4>
                   <ul className="space-y-1">
                     {box.items.map((item, index) => (
                       <li key={index} className="flex items-center text-sm text-gray-600">
@@ -189,7 +190,7 @@ const SubscriptionBoxes = () => {
                       : 'border border-green-600 text-green-600 hover:bg-green-50'
                   }`}
                 >
-                  {selectedBox === box.id ? 'Selected' : 'Select This Box'}
+                  {selectedBox === box.id ? t('selected') || 'Selected' : t('selectThisBox') || 'Select This Box'}
                 </button>
               </div>
             </div>
@@ -198,35 +199,35 @@ const SubscriptionBoxes = () => {
 
         {/* How It Works */}
         <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-          <h2 className="text-2xl font-semibold text-gray-800 text-center mb-8">How It Works</h2>
+          <h2 className="text-2xl font-semibold text-gray-800 text-center mb-8">{t('howItWorks') || 'How It Works'}</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
               <div className="w-12 h-12 bg-green-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">
                 1
               </div>
-              <h3 className="font-semibold text-gray-800 mb-2">Choose Your Box</h3>
-              <p className="text-sm text-gray-600">Select the perfect size for your household</p>
+              <h3 className="font-semibold text-gray-800 mb-2">{t('chooseYourBox') || 'Choose Your Box'}</h3>
+              <p className="text-sm text-gray-600">{t('selectPerfectSize') || 'Select the perfect size for your household'}</p>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 bg-green-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">
                 2
               </div>
-              <h3 className="font-semibold text-gray-800 mb-2">Set Delivery Schedule</h3>
-              <p className="text-sm text-gray-600">Pick weekly, bi-weekly, or monthly deliveries</p>
+              <h3 className="font-semibold text-gray-800 mb-2">{t('setDeliverySchedule') || 'Set Delivery Schedule'}</h3>
+              <p className="text-sm text-gray-600">{t('pickWeeklyBiWeeklyMonthly') || 'Pick weekly, bi-weekly, or monthly deliveries'}</p>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 bg-green-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">
                 3
               </div>
-              <h3 className="font-semibold text-gray-800 mb-2">Receive Fresh Produce</h3>
-              <p className="text-sm text-gray-600">Enjoy seasonal harvests at your doorstep</p>
+              <h3 className="font-semibold text-gray-800 mb-2">{t('receiveFreshProduce') || 'Receive Fresh Produce'}</h3>
+              <p className="text-sm text-gray-600">{t('enjoySeasonalHarvests') || 'Enjoy seasonal harvests at your doorstep'}</p>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 bg-green-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 font-bold">
                 4
               </div>
-              <h3 className="font-semibold text-gray-800 mb-2">Cook & Enjoy</h3>
-              <p className="text-sm text-gray-600">Discover new recipes and flavors</p>
+              <h3 className="font-semibold text-gray-800 mb-2">{t('cookEnjoy') || 'Cook & Enjoy'}</h3>
+              <p className="text-sm text-gray-600">{t('discoverNewRecipes') || 'Discover new recipes and flavors'}</p>
             </div>
           </div>
         </div>
@@ -234,19 +235,19 @@ const SubscriptionBoxes = () => {
         {/* CTA */}
         {selectedBox && (
           <div className="bg-green-600 text-white rounded-lg p-8 text-center">
-            <h2 className="text-2xl font-bold mb-4">Ready to Start Your Farm Fresh Journey?</h2>
+            <h2 className="text-2xl font-bold mb-4">{t('readyToStartFarmFresh') || 'Ready to Start Your Farm Fresh Journey?'}</h2>
             <p className="mb-6">
-              Get your {subscriptionBoxes.find(b => b.id === selectedBox).name} delivered to your doorstep
+              {t('getYourBoxDelivered') || 'Get your'} {subscriptionBoxes.find(b => b.id === selectedBox).name} {t('deliveredToDoorstep') || 'delivered to your doorstep'}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 to="/register"
                 className="bg-white text-green-600 font-semibold py-3 px-6 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                Get Started Now
+                {t('getStartedNow') || 'Get Started Now'}
               </Link>
               <button className="border-2 border-white text-white font-semibold py-3 px-6 rounded-lg hover:bg-white hover:text-green-600 transition-colors">
-                Learn More
+                {t('learnMore') || 'Learn More'}
               </button>
             </div>
           </div>

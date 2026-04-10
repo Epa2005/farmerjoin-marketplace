@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNewTranslation } from '../hooks/useNewTranslation';
 
 const HeroSlider = () => {
+  const { t } = useNewTranslation();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [direction, setDirection] = useState('next');
@@ -9,37 +11,37 @@ const HeroSlider = () => {
   const slides = [
     {
       image: 'https://images.unsplash.com/photo-1577683663445-9d5d4e9b0f?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80',
-      title: 'Rwandan Farmers',
-      subtitle: 'Growing Together',
-      description: 'Local Rwandan farmers cultivating premium coffee and tea for direct market access',
+      title: t('heroSlide1Title'),
+      subtitle: t('heroSlide1Subtitle'),
+      description: t('heroSlide1Description'),
       gradient: 'from-emerald-700/80 to-teal-800/80'
     },
     {
       image: 'https://images.unsplash.com/photo-1592831564632-0c1a3e8a5a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80',
-      title: 'Fresh Produce',
-      subtitle: 'Quality Guaranteed',
-      description: 'Premium Rwandan vegetables and fruits harvested at peak freshness for buyers',
+      title: t('heroSlide2Title'),
+      subtitle: t('heroSlide2Subtitle'),
+      description: t('heroSlide2Description'),
       gradient: 'from-green-700/80 to-emerald-800/80'
     },
     {
       image: 'https://images.unsplash.com/photo-1605000797494-3177d6a5cb?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80',
-      title: 'Digital Marketplace',
-      subtitle: 'Direct Trading',
-      description: 'Rwandan farmers connecting with buyers through modern technology platforms',
+      title: t('heroSlide3Title'),
+      subtitle: t('heroSlide3Subtitle'),
+      description: t('heroSlide3Description'),
       gradient: 'from-blue-700/80 to-indigo-800/80'
     },
     {
       image: 'https://images.unsplash.com/photo-1542831371-97e0731d9d0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80',
-      title: 'Cooperative Success',
-      subtitle: 'Community Power',
-      description: 'Rwandan farming cooperatives thriving through collective market access',
+      title: t('heroSlide4Title'),
+      subtitle: t('heroSlide4Subtitle'),
+      description: t('heroSlide4Description'),
       gradient: 'from-amber-700/80 to-orange-800/80'
     },
     {
       image: 'https://images.unsplash.com/photo-1571013108002-1f0cce899cd5?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=2000&q=80',
-      title: 'Fair Trade',
-      subtitle: 'Better Prices',
-      description: 'Rwandan farmers receiving fair compensation through direct buyer connections',
+      title: t('heroSlide5Title'),
+      subtitle: t('heroSlide5Subtitle'),
+      description: t('heroSlide5Description'),
       gradient: 'from-purple-700/80 to-pink-800/80'
     }
   ];

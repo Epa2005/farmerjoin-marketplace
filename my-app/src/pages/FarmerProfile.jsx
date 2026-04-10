@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import API from '../api';
 import { useCart } from '../context/CartContext';
+import { useNewTranslation } from '../hooks/useNewTranslation';
 
 const FarmerProfile = () => {
+  const { t } = useNewTranslation();
   const { farmerId } = useParams();
   const { addToCart } = useCart();
   const [farmer, setFarmer] = useState(null);
@@ -21,21 +23,27 @@ const FarmerProfile = () => {
     try {
       setLoading(true);
       
-      // Fetch farmer details
+      // Fetch farmer details with products
       const farmerRes = await API.get(`/farmers/${farmerId}`);
-      setFarmer(farmerRes.data);
+      const farmerData = farmerRes.data;
+      
+      setFarmer(farmerData);
       
       // Check if this is the user's own profile (you'd need to implement proper auth)
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      setIsOwnProfile(currentUser.user_id === farmerRes.data.user_id);
+      setIsOwnProfile(currentUser.user_id === farmerData.user_id);
       
-      // Fetch farmer's products
-      const productsRes = await API.get(`/products?farmer_id=${farmerId}`);
-      setProducts(productsRes.data || []);
+      // Extract products from the response
+      setProducts(farmerData.products || []);
       
-      // Fetch farmer reviews
-      const reviewsRes = await API.get(`/reviews?farmer_id=${farmerId}`);
-      setReviews(reviewsRes.data || []);
+      // Fetch farmer reviews (this endpoint might need to be created)
+      try {
+        const reviewsRes = await API.get(`/reviews?farmer_id=${farmerId}`);
+        setReviews(reviewsRes.data || []);
+      } catch (reviewErr) {
+        console.log('Reviews endpoint not available, using empty array');
+        setReviews([]);
+      }
       
     } catch (error) {
       console.error('Error fetching farmer data:', error);
@@ -48,10 +56,10 @@ const FarmerProfile = () => {
     const cartProduct = {
       id: product.product_id,
       name: product.product_name,
-      price: product.price,
+      price: parseFloat(product.price),
       image: product.image,
       farmerName: farmer.full_name,
-      unit: product.unit
+      quantity: 1 // Default quantity
     };
     
     addToCart(cartProduct);
@@ -96,12 +104,12 @@ const FarmerProfile = () => {
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-4xl mx-auto px-4">
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">Farmer Not Found</h2>
+            <h2 className="text-2xl font-semibold text-gray-800 mb-4">{t('farmerNotFound') || 'Farmer Not Found'}</h2>
             <Link
               to="/products"
               className="inline-block bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             >
-              Browse Products
+              {t('browseProducts') || 'Browse Products'}
             </Link>
           </div>
         </div>
@@ -163,12 +171,12 @@ const FarmerProfile = () => {
                 ))}
                 {farmer.is_organic && (
                   <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                    Organic Certified
+                    {t('organicCertified') || 'Organic Certified'}
                   </span>
                 )}
                 {farmer.years_farming && (
                   <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                    {farmer.years_farming}+ Years Experience
+                    {farmer.years_farming}+ {t('yearsExperience') || 'Years Experience'}
                   </span>
                 )}
               </div>
@@ -179,12 +187,12 @@ const FarmerProfile = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                {farmer.location || 'Location not specified'}
+                {farmer.location || t('locationNotSpecified') || 'Location not specified'}
               </div>
 
               {/* Bio */}
               <p className="text-gray-700 leading-relaxed">
-                {farmer.bio || 'Passionate farmer committed to providing fresh, high-quality produce to the local community.'}
+                {farmer.bio || t('passionateFarmerBio') || 'Passionate farmer committed to providing fresh, high-quality produce to the local community.'}
               </p>
             </div>
 
@@ -279,7 +287,7 @@ const FarmerProfile = () => {
                         <div className="h-32 bg-gray-200 rounded-lg mb-4 overflow-hidden">
                           {product.image ? (
                             <img
-                              src={`http://localhost:5000/${product.image}`}
+                              src={`http://localhost:4000/${product.image}`}
                               alt={product.product_name}
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -296,7 +304,7 @@ const FarmerProfile = () => {
                         </div>
                         <h3 className="font-semibold text-gray-800 mb-2">{product.product_name}</h3>
                         <p className="text-green-600 font-bold mb-2">${product.price}/{product.unit || 'unit'}</p>
-                        <p className="text-sm text-gray-600 mb-4 line-clamp-2">{product.description}</p>
+                        <p className="text-sm text-gray-600 mb-4">Quantity: {product.quantity} available</p>
                         <button
                           onClick={() => handleAddToCart(product)}
                           className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 rounded-lg transition-colors"

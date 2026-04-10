@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNewTranslation } from '../hooks/useNewTranslation';
 
 const ImageSlideshow = ({ images, interval = 3000 }) => {
+  const { t } = useNewTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -28,7 +30,7 @@ const ImageSlideshow = ({ images, interval = 3000 }) => {
   if (images.length === 0) {
     return (
       <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-        <p className="text-gray-500">No images available</p>
+        <p className="text-gray-500">{t('noImagesAvailable')}</p>
       </div>
     );
   }

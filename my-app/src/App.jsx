@@ -1,6 +1,9 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
+// Context
+import { CartProvider } from "./context/CartContext";
+
 // Pages
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -21,21 +24,26 @@ import SubscriptionBoxes from "./pages/SubscriptionBoxes";
 import UserManagement from "./pages/UserManagement";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 
 // Components
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthRedirect from "./components/AuthRedirect";
 
 function App() {
   return (
-    <Router>
-      <div className="flex flex-col min-h-screen">
-        <Navbar />
+    <CartProvider>
+      <Router>
+        <Layout>
+          <div className="flex flex-col min-h-screen">
+            <Navbar />
 
-        <main className="flex-grow">
-          <Routes>
+            <main className="flex-grow">
+            <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
@@ -76,11 +84,11 @@ function App() {
               }
             />
 
-            {/* Admin/Farmer Dashboard (protected, role optional) */}
+            {/* Farmer/Cooperative Dashboard (protected for both roles) */}
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute role="farmer">
+                <ProtectedRoute>
                   <FarmerDashboard />
                 </ProtectedRoute>
               }
@@ -106,6 +114,16 @@ function App() {
               }
             />
 
+            {/* Add Product (protected for farmers) */}
+            <Route
+              path="/add-product"
+              element={
+                <ProtectedRoute role="farmer">
+                  <AddProduct />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Orders (protected for buyers) */}
             <Route
               path="/orders"
@@ -116,16 +134,27 @@ function App() {
               }
             />
 
-            {/* Add Product (protected for farmers/admins) */}
+            {/* Cart (protected for buyers) */}
             <Route
-              path="/add-product"
+              path="/cart"
               element={
-                <ProtectedRoute role="farmer">
-                  <AddProduct />
+                <ProtectedRoute role="buyer">
+                  <Cart />
                 </ProtectedRoute>
               }
             />
 
+            {/* Checkout (protected for buyers) */}
+            <Route
+              path="/checkout"
+              element={
+                <ProtectedRoute role="buyer">
+                  <Checkout />
+                </ProtectedRoute>
+              }
+            />
+
+            
             {/* Products (protected for all authenticated users) */}
             <Route
               path="/products"
@@ -155,8 +184,10 @@ function App() {
         </main>
 
         <Footer />
-      </div>
+        </div>
+      </Layout>
     </Router>
+    </CartProvider>
   );
 }
 

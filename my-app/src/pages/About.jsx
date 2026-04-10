@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
+import { useNewTranslation } from "../hooks/useNewTranslation";
 
 const About = () => {
+    const { t } = useNewTranslation();
     const [isVisible, setIsVisible] = useState({});
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [scrollProgress, setScrollProgress] = useState(0);
@@ -75,10 +77,10 @@ const About = () => {
 
                 <div className="relative z-10 text-center text-white px-4 max-w-4xl mx-auto">
                     <h1 className="text-4xl md:text-6xl font-black mb-4 leading-tight tracking-tight animate-fade-in-up">
-                        About FarmerJoin
+                        {t('aboutTitle')}
                     </h1>
                     <p className="text-lg md:text-xl font-light mb-8 leading-relaxed max-w-3xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-                        Empowering Rwandan farmers through technology and direct market connections
+                        {t('aboutSubtitle')}
                     </p>
                 </div>
             </section>
@@ -88,10 +90,10 @@ const About = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                            Our Mission
+                            {t('ourMission')}
                         </h2>
                         <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                            Transforming agriculture through innovation and community
+                            {t('missionText')}
                         </p>
                     </div>
 
@@ -99,18 +101,18 @@ const About = () => {
                         {[
                             {
                                 icon: '🌱',
-                                title: 'Empower Farmers',
-                                description: 'Provide farmers with direct access to markets and fair pricing for their produce'
+                                title: t('value1'),
+                                description: t('value1Text')
                             },
                             {
                                 icon: '🤝',
-                                title: 'Build Community',
-                                description: 'Create a trusted network connecting farmers, cooperatives, and buyers'
+                                title: t('value2'),
+                                description: t('value2Text')
                             },
                             {
                                 icon: '🚀',
-                                title: 'Drive Innovation',
-                                description: 'Leverage technology to make agriculture more efficient and profitable'
+                                title: t('value3'),
+                                description: t('value3Text')
                             }
                         ].map((item, index) => (
                             <div key={index} className="text-center group">
@@ -284,10 +286,10 @@ const About = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-                            Get in Touch
+                            {t('contactUs')}
                         </h2>
                         <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                            Ready to join the FarmerJoin community?
+                            {t('joinText')}
                         </p>
                     </div>
 
@@ -332,7 +334,7 @@ const About = () => {
                             to="/register"
                             className="inline-block bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
                         >
-                            Join FarmerJoin Today
+                            {t('joinUs')}
                         </Link>
                     </div>
                 </div>
@@ -342,7 +344,7 @@ const About = () => {
             <Footer />
 
             {/* Custom Styles */}
-            <style jsx>{`
+            <style jsx={true}>{`
                 @keyframes fade-in-up {
                     from {
                         opacity: 0;

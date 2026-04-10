@@ -1,9 +1,11 @@
 import { useState } from "react";
 import API from "../api";
 import { useNavigate, Link } from "react-router-dom";
+import { useNewTranslation } from "../hooks/useNewTranslation";
 
 function ForgotPassword() {
   const navigate = useNavigate();
+  const { t } = useNewTranslation();
   const [step, setStep] = useState(1); // Step 1: Email verification, Step 2: Password reset
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -138,7 +140,6 @@ function ForgotPassword() {
                     />
                   </div>
                 </div>
-              </div>
 
               <div>
                 <button
@@ -168,12 +169,13 @@ function ForgotPassword() {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                       </svg>
-                      Verifying Email...
+                      {t('verifyingEmail')}
                     </span>
                   ) : (
-                    "Verify Email"
+                    <span>{t('verifyEmail')}</span>
                   )}
                 </button>
+              </div>
               </div>
             </form>
           ) : (
@@ -186,24 +188,24 @@ function ForgotPassword() {
 
               {success && (
                 <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg text-sm">
-                  <p className="font-semibold mb-2">Password reset successful!</p>
-                  <p className="text-xs">Redirecting to login page...</p>
+                  <p className="font-semibold mb-2">{t('passwordResetSuccessful')}</p>
+                  <p className="text-xs">{t('redirectingToLogin')}</p>
                 </div>
               )}
 
               <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-4">
                 <p className="text-sm text-blue-800">
-                  <span className="font-semibold">Account verified:</span> {userData?.email}
+                  <span className="font-semibold">{t('accountVerified')}:</span> {userData?.email}
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  <span className="font-semibold">Account type:</span> {userData?.role}
+                  <span className="font-semibold">{t('accountType')}:</span> {userData?.role}
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div>
                   <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-2 font-ui">
-                    New Password
+                    {t('newPassword')}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -214,7 +216,7 @@ function ForgotPassword() {
                     <input
                       id="newPassword"
                       type="password"
-                      placeholder="Enter your new password"
+                      placeholder={t('enterNewPassword')}
                       className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent font-ui bg-white text-gray-800 placeholder-gray-500"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
@@ -226,7 +228,7 @@ function ForgotPassword() {
 
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2 font-ui">
-                    Confirm New Password
+                    {t('confirmNewPassword')}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -237,7 +239,7 @@ function ForgotPassword() {
                     <input
                       id="confirmPassword"
                       type="password"
-                      placeholder="Confirm your new password"
+                      placeholder={t('confirmNewPassword')}
                       className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent font-ui bg-white text-gray-800 placeholder-gray-500"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
@@ -276,45 +278,44 @@ function ForgotPassword() {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                       </svg>
-                      Resetting Password...
+                      {t('resettingPassword')}
                     </span>
                   ) : (
-                    "Reset Password"
+                    t('resetPassword')
                   )}
                 </button>
               </div>
             </form>
           )}
-
+          
           <div className="text-center space-y-2 mt-6">
             <p className="text-sm text-gray-600 font-ui">
               {step === 1 ? (
                 <>
-                  Remember your password?{" "}
+                  {t('rememberPassword')}{' '}
                   <Link to="/login" className="font-medium text-orange-600 hover:text-orange-500">
-                    Back to Login
+                    {t('backToLogin')}
                   </Link>
                 </>
               ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="font-medium text-orange-600 hover:text-orange-500"
-                  >
-                    Back to Email Verification
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="font-medium text-orange-600 hover:text-orange-500"
+                >
+                  {t('backToEmailVerification')}
+                </button>
               )}
             </p>
             <p className="text-xs text-gray-500 font-ui">
-              Note: This feature is available for buyer, farmer, and cooperative accounts
+              {t('forgotPasswordNote')}
             </p>
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default ForgotPassword;
+

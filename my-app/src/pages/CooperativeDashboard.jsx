@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../api';
+import { useNewTranslation } from '../hooks/useNewTranslation';
 
 const CooperativeDashboard = () => {
+  const { t } = useNewTranslation();
   const navigate = useNavigate();
   const [cooperativeData, setCooperativeData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -55,9 +57,9 @@ const CooperativeDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">Cooperative Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{t('cooperativeDashboard') || 'Cooperative Dashboard'}</h1>
               {cooperativeData && (
-                <span className="text-sm text-gray-600">Welcome, {cooperativeData.cooperative_name}</span>
+                <span className="text-sm text-gray-600">{t('welcome') || 'Welcome'}, {cooperativeData.cooperative_name}</span>
               )}
             </div>
             <div className="flex items-center space-x-4">
@@ -65,7 +67,7 @@ const CooperativeDashboard = () => {
                 onClick={handleLogout}
                 className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               >
-                Logout
+                {t('logout') || 'Logout'}
               </button>
             </div>
           </div>
@@ -75,26 +77,26 @@ const CooperativeDashboard = () => {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {/* Welcome Card */}
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Welcome to Your Cooperative Dashboard</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">{t('welcomeToCooperativeDashboard') || 'Welcome to Your Cooperative Dashboard'}</h2>
           <p className="text-gray-600 mb-6">
-            Manage your cooperative profile, members, and agricultural activities from here.
+            {t('manageCooperativeProfile') || 'Manage your cooperative profile, members, and agricultural activities from here.'}
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-medium text-blue-800 mb-2">Total Members</h3>
+              <h3 className="font-medium text-blue-800 mb-2">{t('totalMembers') || 'Total Members'}</h3>
               <p className="text-2xl font-bold text-blue-600">0</p>
             </div>
             <div className="bg-green-50 p-4 rounded-lg">
-              <h3 className="font-medium text-green-800 mb-2">Active Projects</h3>
+              <h3 className="font-medium text-green-800 mb-2">{t('activeProjects') || 'Active Projects'}</h3>
               <p className="text-2xl font-bold text-green-600">0</p>
             </div>
             <div className="bg-yellow-50 p-4 rounded-lg">
-              <h3 className="font-medium text-yellow-800 mb-2">Products Listed</h3>
+              <h3 className="font-medium text-yellow-800 mb-2">{t('productsListed') || 'Products Listed'}</h3>
               <p className="text-2xl font-bold text-yellow-600">0</p>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg">
-              <h3 className="font-medium text-purple-800 mb-2">Revenue</h3>
+              <h3 className="font-medium text-purple-800 mb-2">{t('revenue') || 'Revenue'}</h3>
               <p className="text-2xl font-bold text-purple-600">$0</p>
             </div>
           </div>
@@ -102,7 +104,7 @@ const CooperativeDashboard = () => {
 
         {/* Quick Actions */}
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-6">Quick Actions</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-6">{t('quickActions') || 'Quick Actions'}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Link
               to="/edit-profile"
@@ -111,87 +113,78 @@ const CooperativeDashboard = () => {
               <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
-              Edit Profile
+              {t('editProfile') || 'Edit Profile'}
             </Link>
             
-            <Link
-              to="/add-product"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center"
-            >
-              <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Product
-            </Link>
-
+            
             <button className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center">
               <svg className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              Manage Members
+              {t('manageMembers') || 'Manage Members'}
             </button>
           </div>
         </div>
 
         {/* Profile Information */}
         <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-6">Cooperative Information</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-6">{t('cooperativeInformation') || 'Cooperative Information'}</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Cooperative Name</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('cooperativeName') || 'Cooperative Name'}</label>
               <input
                 type="text"
                 defaultValue={cooperativeData?.cooperative_name || ''}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Your cooperative name"
+                placeholder={t('yourCooperativeName') || "Your cooperative name"}
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('email') || 'Email'}</label>
               <input
                 type="email"
                 defaultValue={cooperativeData?.email || ''}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="your@email.com"
+                placeholder={t('yourEmail') || "your@email.com"}
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('phone') || 'Phone'}</label>
               <input
                 type="tel"
                 defaultValue={cooperativeData?.phone || ''}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="+250788123456"
+                placeholder={t('yourPhone') || "+250788123456"}
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('location') || 'Location'}</label>
               <input
                 type="text"
                 defaultValue={cooperativeData?.location || ''}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="District, Province"
+                placeholder={t('districtProvince') || "District, Province"}
               />
             </div>
           </div>
           
           <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('description') || 'Description'}</label>
             <textarea
               rows={4}
               defaultValue={cooperativeData?.description || ''}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              placeholder="Tell customers about your cooperative..."
+              placeholder={t('tellAboutCooperative') || "Tell customers about your cooperative..."}
             ></textarea>
           </div>
           
           <div className="mt-6 flex justify-end">
             <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
-              Save Changes
+              {t('saveChanges') || 'Save Changes'}
             </button>
           </div>
         </div>

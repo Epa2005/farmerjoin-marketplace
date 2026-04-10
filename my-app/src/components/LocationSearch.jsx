@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNewTranslation } from '../hooks/useNewTranslation';
 
-const LocationSearch = ({ onLocationSelect, placeholder = "Enter your location..." }) => {
+const LocationSearch = ({ onLocationSelect, placeholder }) => {
+  const { t } = useNewTranslation();
+  const finalPlaceholder = placeholder || t('enterLocation');
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
@@ -8,16 +11,16 @@ const LocationSearch = ({ onLocationSelect, placeholder = "Enter your location..
 
   // Mock location data - in real app, this would come from a geocoding API
   const mockLocations = [
-    { city: 'New York', state: 'NY', lat: 40.7128, lng: -74.0060, distance: 0 },
-    { city: 'Los Angeles', state: 'CA', lat: 34.0522, lng: -118.2437, distance: 0 },
-    { city: 'Chicago', state: 'IL', lat: 41.8781, lng: -87.6298, distance: 0 },
-    { city: 'Houston', state: 'TX', lat: 29.7604, lng: -95.3698, distance: 0 },
-    { city: 'Phoenix', state: 'AZ', lat: 33.4484, lng: -112.0740, distance: 0 },
-    { city: 'Philadelphia', state: 'PA', lat: 39.9526, lng: -75.1652, distance: 0 },
-    { city: 'San Antonio', state: 'TX', lat: 29.4241, lng: -98.4936, distance: 0 },
-    { city: 'San Diego', state: 'CA', lat: 32.7157, lng: -117.1611, distance: 0 },
-    { city: 'Dallas', state: 'TX', lat: 32.7767, lng: -96.7970, distance: 0 },
-    { city: 'San Jose', state: 'CA', lat: 37.3382, lng: -121.8863, distance: 0 }
+    { city: t('newYork'), state: t('newYorkState'), lat: 40.7128, lng: -74.0060, distance: 0 },
+    { city: t('losAngeles'), state: t('california'), lat: 34.0522, lng: -118.2437, distance: 0 },
+    { city: t('chicago'), state: t('illinois'), lat: 41.8781, lng: -87.6298, distance: 0 },
+    { city: t('houston'), state: t('texas'), lat: 29.7604, lng: -95.3698, distance: 0 },
+    { city: t('phoenix'), state: t('arizona'), lat: 33.4484, lng: -112.0740, distance: 0 },
+    { city: t('philadelphia'), state: t('pennsylvania'), lat: 39.9526, lng: -75.1652, distance: 0 },
+    { city: t('sanAntonio'), state: t('texas'), lat: 29.4241, lng: -98.4936, distance: 0 },
+    { city: t('sanDiego'), state: t('california'), lat: 32.7157, lng: -117.1611, distance: 0 },
+    { city: t('dallas'), state: t('texas'), lat: 32.7767, lng: -96.7970, distance: 0 },
+    { city: t('sanJose'), state: t('california'), lat: 37.3382, lng: -121.8863, distance: 0 }
   ];
 
   useEffect(() => {
@@ -41,7 +44,7 @@ const LocationSearch = ({ onLocationSelect, placeholder = "Enter your location..
           const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-            city: 'Current Location',
+            city: t('currentLocation'),
             state: ''
           };
           setUserLocation(location);

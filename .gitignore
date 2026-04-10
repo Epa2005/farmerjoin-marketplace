@@ -1,103 +1,20 @@
-# Dependencies
+# Node modules
 node_modules/
-*/node_modules/
-
-# Production builds
-/my-app/dist/
-/my-app/build/
+my-app/node_modules/
+Backend_App/node_modules/
 
 # Environment variables
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+Backend_App/.env
 
-# Database
-*.sqlite
-*.db
+# Uploads directory (images and files)
+Backend_App/uploads/
+uploads/
 
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
-
-# nyc test coverage
-.nyc_output
-
-# Dependency directories
-jspm_packages/
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# dotenv environment variables file
-.env
-
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
-
-# next.js build output
-.next
-
-# nuxt.js build output
-.nuxt
-
-# vuepress build output
-.vuepress/dist
-
-# Serverless directories
-.serverless
-
-# FuseBox cache
-.fusebox/
-
-# DynamoDB Local files
-.dynamodb/
-
-# TernJS port file
-.tern-port
-
-# Stores VSCode versions used for testing VSCode extensions
-.vscode-test
-
-# Temporary folders
-tmp/
-temp/
-
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# Build outputs
+my-app/dist/
+my-app/build/
+Backend_App/dist/
 
 # IDE files
 .vscode/
@@ -106,6 +23,37 @@ Thumbs.db
 *.swo
 *~
 
-# Uploads (keep in production but ignore for dev)
-uploads/
-!uploads/.gitkeep
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Test files and temporary files
+Backend_App/test_*.js
+Backend_App/debug_*.js
+Backend_App/check_*.js
+Backend_App/*.bat
+Backend_App/*.sql
+Backend_App/*.md
+Backend_App/simple*.js
+Backend_App/app2.js
+Backend_App/user-data-server.js
+Backend_App/user_form.html
+Backend_App/user_data.csv
+Backend_App/student_class.py
+Backend_App/test-image-uploaded.html
+Backend_App/test-registration.html
+
+# Backup and broken files
+my-app/src/pages/*.backup
+my-app/src/pages/*.broken
+my-app/src/pages/*.corrupted
+my-app/src/pages/*_Backup.jsx
+my-app/src/pages/*_Fixed.jsx
+my-app/src/pages/*_Test.jsx
+my-app/src/pages/ForgotPassword_temp.txt
+my-app/src/pages/Login_Simple.jsx
+my-app/src/styles/design-system.css

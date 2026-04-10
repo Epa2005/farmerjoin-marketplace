@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import API from '../api';
+import { useNewTranslation } from '../hooks/useNewTranslation';
 
 const EditProduct = () => {
   const navigate = useNavigate();
   const { productId } = useParams();
+  const { t } = useNewTranslation();
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   

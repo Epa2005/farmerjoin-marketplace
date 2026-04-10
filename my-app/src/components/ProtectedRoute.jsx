@@ -10,16 +10,27 @@ const ProtectedRoute = ({ children, role }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (role && user?.role !== role) {
-    // Logged in but wrong role - redirect to appropriate dashboard
-    if (user.role === "buyer") {
-      return <Navigate to="/buyer-dashboard" replace />;
-    } else if (user.role === "farmer" || user.role === "cooperative") {
-      return <Navigate to="/dashboard" replace />;
-    } else if (user.role === "admin") {
-      return <Navigate to="/admin-dashboard" replace />;
-    } else {
-      return <Navigate to="/" replace />;
+  // If no specific role is required, just check if user is authenticated
+  if (!role) {
+    return children;
+  }
+
+  if (user?.role) {
+    const userRole = user.role.toLowerCase();
+    const requiredRole = role.toLowerCase();
+    
+    if (userRole !== requiredRole) {
+      // Logged in but wrong role - redirect to appropriate dashboard
+      if (userRole === "buyer") {
+        return <Navigate to="/buyer-dashboard" replace />;
+      } else if (userRole === "farmer" || userRole === "cooperative") {
+        return <Navigate to="/dashboard" replace />;
+      } else if (userRole === "admin") {
+        return <Navigate to="/admin-dashboard" replace />;
+      } else {
+        // Default to dashboard for farmers and cooperatives, otherwise home
+        return <Navigate to="/dashboard" replace />;
+      }
     }
   }
 

@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import API from "../api";
 import { useNavigate, useParams } from "react-router-dom";
+import { useNewTranslation } from "../hooks/useNewTranslation";
 
 function EditProfile() {
     const { farmerId } = useParams();
     const navigate = useNavigate();
+    const { t } = useNewTranslation();
     const [profile, setProfile] = useState({
         full_name: "",
         farm_name: "",
@@ -111,10 +113,10 @@ function EditProfile() {
                 {/* Header */}
                 <div className="text-center mb-8">
                     <h2 className="text-3xl font-bold text-gray-800">
-                        Edit Profile
+                        {t('editProfile') || 'Edit Profile'}
                     </h2>
                     <p className="mt-2 text-gray-600">
-                        Update your farm profile information
+                        {t('updateFarmProfileInfo') || 'Update your farm profile information'}
                     </p>
                 </div>
 
@@ -122,7 +124,7 @@ function EditProfile() {
                 <form className="bg-white p-8 rounded-xl shadow-md" onSubmit={handleSubmit}>
                     {success && (
                         <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg text-sm mb-6">
-                            Profile updated successfully! Redirecting...
+                            {t('profileUpdatedSuccess') || 'Profile updated successfully! Redirecting...'}
                         </div>
                     )}
                     
@@ -135,7 +137,7 @@ function EditProfile() {
                     {/* Profile Photo Section */}
                     <div className="mb-8">
                         <label className="block text-sm font-medium text-gray-700 mb-4">
-                            Profile Photo
+                            {t('profilePhoto') || 'Profile Photo'}
                         </label>
                         
                         <div className="flex items-center space-x-6">
@@ -162,14 +164,14 @@ function EditProfile() {
                             <div className="flex-grow">
                                 <div className="space-y-3">
                                     <div>
-                                        <label className="block text-xs text-gray-500 mb-1">Upload new photo</label>
+                                        <label className="block text-xs text-gray-500 mb-1">{t('uploadNewPhoto') || 'Upload new photo'}</label>
                                         <input
                                             type="file"
                                             accept="image/*"
                                             onChange={handleFileChange}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
                                         />
-                                        <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF up to 5MB</p>
+                                        <p className="text-xs text-gray-500 mt-1">{t('jpgPngGifUpTo5mb') || 'JPG, PNG, GIF up to 5MB'}</p>
                                     </div>
                                     
                                     <div className="relative">
@@ -177,12 +179,12 @@ function EditProfile() {
                                             <div className="w-full border-t border-gray-300"></div>
                                         </div>
                                         <div className="relative flex justify-center text-sm">
-                                            <span className="px-2 bg-white text-gray-500">Or</span>
+                                            <span className="px-2 bg-white text-gray-500">{t('or') || 'Or'}</span>
                                         </div>
                                     </div>
                                     
                                     <div>
-                                        <label className="block text-xs text-gray-500 mb-1">Photo URL</label>
+                                        <label className="block text-xs text-gray-500 mb-1">{t('photoUrl') || 'Photo URL'}</label>
                                         <input
                                             type="url"
                                             placeholder="https://example.com/photo.jpg"
@@ -206,7 +208,7 @@ function EditProfile() {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Full Name *
+                                    {t('fullName') || 'Full Name'} *
                                 </label>
                                 <input
                                     id="full_name"
@@ -221,7 +223,7 @@ function EditProfile() {
 
                             <div>
                                 <label htmlFor="farm_name" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Farm Name *
+                                    {t('farmName') || 'Farm Name'} *
                                 </label>
                                 <input
                                     id="farm_name"
@@ -237,12 +239,12 @@ function EditProfile() {
 
                         <div>
                             <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">
-                                Bio
+                                {t('bio') || 'Bio'}
                             </label>
                             <textarea
                                 id="bio"
                                 rows={4}
-                                placeholder="Tell us about your farm and farming practices..."
+                                placeholder={t('tellUsAboutFarm') || "Tell us about your farm and farming practices..."}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                                 value={profile.bio}
                                 onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
@@ -252,7 +254,7 @@ function EditProfile() {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Location
+                                    {t('location') || 'Location'}
                                 </label>
                                 <input
                                     id="location"
@@ -266,7 +268,7 @@ function EditProfile() {
 
                             <div>
                                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Email
+                                    {t('email') || 'Email'}
                                 </label>
                                 <input
                                     id="email"
@@ -281,7 +283,7 @@ function EditProfile() {
 
                         <div>
                             <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                                Phone
+                                {t('phone') || 'Phone'}
                             </label>
                             <input
                                 id="phone"
@@ -306,10 +308,10 @@ function EditProfile() {
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    Updating profile...
+                                    {t('updating') || 'Updating...'}
                                 </span>
                             ) : (
-                                "Update Profile"
+                                t('updateProfile') || 'Update Profile'
                             )}
                         </button>
                         
@@ -318,7 +320,7 @@ function EditProfile() {
                             onClick={() => navigate(`/farmer/${farmerId}`)}
                             className="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
                         >
-                            Cancel
+                            {t('cancel') || 'Cancel'}
                         </button>
                     </div>
                 </form>
