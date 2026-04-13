@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { useNewTranslation } from '../hooks/useNewTranslation';
+import { useTranslation } from '../hooks/useTranslation';
 
 const Cart = () => {
   const { items, removeFromCart, updateQuantity, getCartTotal, clearCart } = useCart();
-  const { t } = useNewTranslation();
+  const { t } = useTranslation();
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
 

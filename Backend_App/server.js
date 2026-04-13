@@ -64,12 +64,21 @@ app.use("/uploads", (req, res, next) => {
     maxAge: '1d',
     etag: true
 }));
-app.use("/images", (req, res, next) => {
+app.use("/uploads/images", (req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     next();
 }, express.static("uploads/images", {
+    maxAge: '1d',
+    etag: true
+}));
+app.use("/uploads/admin", (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+}, express.static("uploads/admin", {
     maxAge: '1d',
     etag: true
 }));
@@ -89,6 +98,45 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
     storage: storage,
+    limits: {
+        fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024, // 5MB default
+        files: 1 // Limit to 1 file per request
+    },
+    fileFilter: function (req, file, cb) {
+        const allowedTypes = process.env.ALLOWED_FILE_TYPES ? 
+            process.env.ALLOWED_FILE_TYPES.split(',') : 
+            ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        
+        const ext = file.originalname.split('.').pop().toLowerCase();
+        if (!allowedTypes.includes(ext)) {
+            return cb(new Error(`Invalid file type. Allowed types: ${allowedTypes.join(', ')}`), false);
+        }
+        cb(null, true);
+    }
+});
+
+// Admin upload storage configuration
+const adminStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const fs = require('fs');
+        const adminUploadDir = 'uploads/admin';
+        
+        // Create admin directory if it doesn't exist
+        if (!fs.existsSync(adminUploadDir)) {
+            fs.mkdirSync(adminUploadDir, { recursive: true });
+        }
+        
+        cb(null, adminUploadDir);
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = file.originalname.split('.').pop();
+        cb(null, `admin-${uniqueSuffix}.${ext}`);
+    }
+});
+
+const adminUpload = multer({ 
+    storage: adminStorage,
     limits: {
         fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024, // 5MB default
         files: 1 // Limit to 1 file per request
@@ -237,6 +285,9 @@ app.post("/auth/login", loginLimiter, validateInput(validateLogin), (req, res) =
             return res.status(500).json({ message: 'Database error' });
         }
         
+        console.log('LOGIN ATTEMPT - Email:', email);
+        console.log('LOGIN ATTEMPT - Users found:', result.length);
+        
         if (result.length === 0) {
             // Log failed login attempt
             console.warn(`Failed login attempt for email: ${email}`);
@@ -244,6 +295,8 @@ app.post("/auth/login", loginLimiter, validateInput(validateLogin), (req, res) =
         }
         
         const user = result[0];
+        console.log('LOGIN ATTEMPT - User found:', user);
+        console.log('LOGIN ATTEMPT - Stored password hash:', user.password);
         
         try {
             const validPassword = await bcrypt.compare(password, user.password);
@@ -766,19 +819,88 @@ app.get('/products/:productId', (req, res) => {
 app.delete('/users/:userId', isAdmin, (req, res) => {
     const { userId } = req.params;
     
-    const query = 'DELETE FROM users WHERE user_id = ?';
+    console.log('DELETING USER - userId:', userId);
+    console.log('DELETING USER - Request from admin:', req.user?.full_name);
     
-    db.query(query, [userId], (err, result) => {
+    // First check if user exists and get their role
+    const checkQuery = 'SELECT user_id, role FROM users WHERE user_id = ?';
+    db.query(checkQuery, [userId], (err, userResult) => {
         if (err) {
-            console.error('Database error:', err);
-            return res.status(500).json({ message: 'Failed to delete user' });
+            console.error('Database error checking user:', err);
+            return res.status(500).json({ message: 'Database error' });
         }
         
-        if (result.affectedRows === 0) {
+        if (userResult.length === 0) {
+            console.log('USER NOT FOUND for deletion:', userId);
             return res.status(404).json({ message: 'User not found' });
         }
         
-        res.json({ message: 'User deleted successfully' });
+        console.log('USER FOUND FOR DELETION:', userResult[0]);
+        
+        // Get farmer_id if user is a farmer, to delete their products first
+        const getFarmerIdQuery = 'SELECT farmer_id FROM farmers WHERE user_id = ?';
+        db.query(getFarmerIdQuery, [userId], (err, farmerResult) => {
+            if (err) {
+                console.error('Error getting farmer_id:', err);
+            }
+            
+            const farmerId = farmerResult.length > 0 ? farmerResult[0].farmer_id : null;
+            
+            // Start cascade deletion process
+            const deleteRelatedRecords = () => {
+                console.log('STARTING CASCADE DELETION for user:', userId, 'farmer_id:', farmerId);
+                
+                // Delete in correct order to respect foreign key constraints
+                const deleteSteps = [
+                    // 1. Delete cart items for this user (if buyer)
+                    { query: 'DELETE FROM cart WHERE buyer_id = ?', params: [userId] },
+                    // 2. Delete order items for this user's products (if farmer)
+                    { query: 'DELETE oi FROM order_items oi JOIN products p ON oi.product_id = p.product_id WHERE p.farmer_id = ?', params: [farmerId] },
+                    // 3. Delete orders for this user (if buyer)
+                    { query: 'DELETE FROM orders WHERE buyer_id = ?', params: [userId] },
+                    // 4. Delete products for this user (if farmer)
+                    { query: 'DELETE FROM products WHERE farmer_id = ?', params: [farmerId] },
+                    // 5. Delete farmer profile (if farmer)
+                    { query: 'DELETE FROM farmers WHERE user_id = ?', params: [userId] },
+                    // 6. Finally delete the user
+                    { query: 'DELETE FROM users WHERE user_id = ?', params: [userId] }
+                ];
+                
+                let currentStep = 0;
+                
+                const executeNextStep = () => {
+                    if (currentStep < deleteSteps.length) {
+                        const step = deleteSteps[currentStep];
+                        console.log(`EXECUTING STEP ${currentStep + 1}:`, step.query);
+                        console.log('PARAMETERS:', step.params);
+                        
+                        db.query(step.query, step.params, (err, result) => {
+                            if (err) {
+                                console.error(`ERROR IN STEP ${currentStep + 1}:`, err);
+                                console.error('ERROR CODE:', err.code);
+                                console.error('ERROR MESSAGE:', err.message);
+                                return res.status(500).json({ 
+                                    message: `Failed to delete user at step ${currentStep + 1}`,
+                                    step: currentStep + 1,
+                                    error: err.message 
+                                });
+                            }
+                            
+                            console.log(`STEP ${currentStep + 1} COMPLETED:`, result);
+                            currentStep++;
+                            executeNextStep();
+                        });
+                    } else {
+                        console.log('CASCADE DELETION COMPLETED for user:', userId);
+                        res.json({ message: 'User and all related records deleted successfully' });
+                    }
+                };
+                
+                executeNextStep();
+            };
+            
+            deleteRelatedRecords();
+        });
     });
 });
 
@@ -825,15 +947,19 @@ app.put('/users/:userId/activate', isAdmin, (req, res) => {
 // Get all products (public endpoint) with optional farmer filtering
 app.get('/products', (req, res) => {
     const { farmer_id } = req.query;
+    console.log('PRODUCTS ENDPOINT - farmer_id from query:', farmer_id);
     
     let query = `
         SELECT 
             p.*,
             u.full_name as farmer_name,
             u.email as farmer_email,
-            u.phone as farmer_phone
+            u.phone as farmer_phone,
+            f.location as farm_location,
+            f.farm_name
         FROM products p
-        LEFT JOIN users u ON p.farmer_id = u.user_id
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+        LEFT JOIN users u ON f.user_id = u.user_id
     `;
     let params = [];
     
@@ -841,17 +967,37 @@ app.get('/products', (req, res) => {
     if (farmer_id) {
         query += ' WHERE p.farmer_id = ?';
         params.push(parseInt(farmer_id));
+        console.log('PRODUCTS - Added WHERE clause for farmer_id:', farmer_id);
+        
+        // Special debugging for farmer_id 110
+        if (farmer_id == 110) {
+            console.log('*** DEBUGGING PRODUCTS FOR FARMER 110 ***');
+            console.log('- Filtering products for farmer_id 110');
+            console.log('- Query executed:', query);
+            console.log('- Parameters used:', [farmer_id]);
+        }
     }
     
     query += ' ORDER BY p.created_at DESC';
+    console.log('PRODUCTS - Final query:', query);
+    console.log('PRODUCTS - Final params:', params);
     
     db.query(query, params, (err, results) => {
         if (err) {
             console.error('Database error:', err);
+            console.error('Failed query:', query);
+            console.error('Failed params:', params);
             return res.status(500).json({ message: 'Failed to fetch products' });
         }
-        console.log(`Products query results (farmer_id=${farmer_id}):`, results);
-        res.json(results);
+        
+        // Add full image path to each product
+        const productsWithImagePaths = results.map(product => ({
+            ...product,
+            image: product.image ? `uploads/products/${product.image}` : null
+        }));
+        
+        console.log(`Products query results (farmer_id=${farmer_id}):`, productsWithImagePaths);
+        res.json(productsWithImagePaths);
     });
 });
 
@@ -2600,11 +2746,12 @@ app.get('/buyer/products/:productId', auth.requireRole(['buyer']), (req, res) =>
             u.email as farmer_email,
             u.phone as farmer_phone,
             f.location as farm_location,
+            f.farm_name,
             f.farm_type,
             f.description as farm_description
         FROM products p
-        JOIN users u ON p.farmer_id = u.user_id
-        JOIN farmers f ON p.farmer_id = f.user_id
+        JOIN farmers f ON p.farmer_id = f.farmer_id
+        JOIN users u ON f.user_id = u.user_id
         WHERE p.product_id = ?
     `;
     
@@ -2618,7 +2765,14 @@ app.get('/buyer/products/:productId', auth.requireRole(['buyer']), (req, res) =>
             return res.status(404).json({ message: 'Product not found' });
         }
         
-        res.json(results[0]);
+        // Add full image path to product
+        const productWithImagePath = {
+            ...results[0],
+            image: results[0].image ? `uploads/products/${results[0].image}` : null
+        };
+        
+        console.log('Product detail with image path:', productWithImagePath);
+        res.json(productWithImagePath);
     });
 });
 
@@ -2787,6 +2941,73 @@ app.post('/buyer/cart/add', (req, res) => {
     }
 });
 
+function createProductWithFarmerId(farmerId, req, res) {
+    const { product_name, category, price, quantity, description } = req.body;
+    const image = req.file ? req.file.filename : '';
+    
+    // Insert farmer with consistent farmer_id
+    const query = `
+        INSERT INTO farmers (
+            user_id, 
+            location, 
+            farm_type, 
+            description
+        ) VALUES (?, ?, ?, ?)
+    `;
+    
+    // After insertion, update farmer_id to match user_id
+    const updateQuery = 'UPDATE farmers SET farmer_id = ? WHERE user_id = ?';
+    
+    const values = [
+        product_name,
+        category || 'general',
+        parseFloat(price),
+        parseInt(quantity) || 1,
+        farmerId,
+        image
+    ];
+    
+    db.query(query, values, (err, result) => {
+        if (err) {
+            console.error('Database error:', err);
+            console.error('Failed query:', query);
+            console.error('Failed values:', values);
+            return res.status(500).json({ message: 'Failed to add product' });
+        }
+        
+        // Execute update to ensure farmer_id = user_id consistency
+        db.query(updateQuery, [decoded.user_id, decoded.user_id], (err) => {
+            if (err) {
+                console.error('Error fixing farmer_id:', err);
+            } else {
+                console.log('FARMER_ID FIXED AUTOMATICALLY');
+            }
+        });
+        
+        // Log product creation with full details
+        console.log('PRODUCT CREATED SUCCESSFULLY:');
+        console.log('- Product ID:', result.insertId);
+        console.log('- Product Name:', product_name);
+        console.log('- Farmer ID (consistent):', farmerId);
+        console.log('- Values inserted:', values);
+        
+        res.status(201).json({
+            message: 'Product added successfully',
+            product_id: result.insertId,
+            product: {
+                product_id: result.insertId,
+                product_name,
+                category: category || 'general',
+                price: parseFloat(price),
+                quantity: parseInt(quantity) || 1,
+                farmer_id: farmerId,
+                image: image ? `uploads/products/${image}` : '',
+                created_at: new Date()
+            }
+        });
+    });
+}
+
 // Helper function to create cart notification
 function createCartNotification(buyerId, farmerId, productId, quantity) {
     // Get buyer and product info for notification
@@ -2853,6 +3074,373 @@ function createOrderNotification(buyerId, farmerId, orderId, productId, quantity
     });
 }
 
+// Debug endpoint to check farmers table
+app.get('/debug/farmers', (req, res) => {
+    const query = 'SELECT * FROM farmers';
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('Error checking farmers table:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        console.log('FARMERS TABLE DEBUG:', results);
+        res.json(results);
+    });
+});
+
+// Admin image upload endpoint
+app.post('/admin/upload-image', adminUpload.single('image'), (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'No image file provided' });
+        }
+
+        const { category = 'dashboard' } = req.body;
+        const filename = req.file.filename;
+        const originalName = req.file.originalname;
+        const path = `uploads/admin/${filename}`;
+
+        // Insert image record into database
+        const query = `
+            INSERT INTO admin_images (
+                original_name,
+                filename,
+                path,
+                category,
+                uploaded_by,
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, NOW())
+        `;
+
+        const values = [
+            originalName,
+            filename,
+            path,
+            category,
+            decoded.user_id
+        ];
+
+        db.query(query, values, (err, result) => {
+            if (err) {
+                console.error('Database error saving image:', err);
+                return res.status(500).json({ message: 'Failed to save image information' });
+            }
+
+            console.log('ADMIN IMAGE UPLOADED:', {
+                id: result.insertId,
+                original_name: originalName,
+                filename: filename,
+                path: path,
+                category: category,
+                uploaded_by: decoded.user_id
+            });
+
+            res.status(201).json({
+                message: 'Image uploaded successfully',
+                image: {
+                    id: result.insertId,
+                    original_name: originalName,
+                    filename: filename,
+                    path: path,
+                    category: category,
+                    uploaded_by: decoded.user_id,
+                    created_at: new Date()
+                }
+            });
+        });
+
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+// Get admin images endpoint
+app.get('/admin/images', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        const query = `
+            SELECT 
+                id,
+                original_name,
+                filename,
+                path,
+                category,
+                uploaded_by,
+                created_at
+            FROM admin_images
+            ORDER BY created_at DESC
+        `;
+
+        db.query(query, (err, results) => {
+            if (err) {
+                console.error('Database error fetching images:', err);
+                return res.status(500).json({ message: 'Failed to fetch images' });
+            }
+
+            console.log('ADMIN IMAGES RETRIEVED:', results.length, 'images');
+            res.json({ images: results });
+        });
+
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+// Delete admin image endpoint
+app.delete('/admin/images/:imageId', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        const { imageId } = req.params;
+
+        // First get the image info to delete the file
+        const getImageQuery = 'SELECT * FROM admin_images WHERE id = ?';
+        db.query(getImageQuery, [imageId], (err, imageResult) => {
+            if (err) {
+                console.error('Database error getting image:', err);
+                return res.status(500).json({ message: 'Failed to get image information' });
+            }
+
+            if (imageResult.length === 0) {
+                return res.status(404).json({ message: 'Image not found' });
+            }
+
+            const image = imageResult[0];
+
+            // Delete from database
+            const deleteQuery = 'DELETE FROM admin_images WHERE id = ?';
+            db.query(deleteQuery, [imageId], (err, result) => {
+                if (err) {
+                    console.error('Database error deleting image:', err);
+                    return res.status(500).json({ message: 'Failed to delete image' });
+                }
+
+                console.log('ADMIN IMAGE DELETED:', {
+                    id: imageId,
+                    filename: image.filename,
+                    path: image.path
+                });
+
+                res.json({ message: 'Image deleted successfully' });
+            });
+        });
+
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+// Admin dashboard farmers endpoint (for AdminDashboard.jsx)
+app.get('/admin/farmers', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        const query = `
+            SELECT f.*, u.full_name, u.email, u.phone, u.created_at
+            FROM farmers f
+            JOIN users u ON f.user_id = u.user_id
+            WHERE u.role = 'farmer'
+            ORDER BY u.created_at DESC
+        `;
+
+        db.query(query, (err, results) => {
+            if (err) {
+                console.error('Database error fetching farmers:', err);
+                return res.status(500).json({ message: 'Failed to fetch farmers' });
+            }
+
+            console.log('ADMIN FARMERS RETRIEVED:', results.length, 'farmers');
+            res.json({ farmers: results });
+        });
+
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+// Farmer notifications endpoint - view orders for their products
+app.get('/farmer/notifications', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'farmer') {
+            return res.status(403).json({ message: 'Farmer access required' });
+        }
+
+        const farmerId = decoded.user_id;
+
+        const query = `
+            SELECT 
+                o.order_id,
+                o.buyer_id,
+                o.total_amount,
+                o.delivery_address,
+                o.payment_method,
+                o.status as order_status,
+                o.created_at as order_date,
+                oi.product_id,
+                oi.quantity,
+                oi.price,
+                p.product_name,
+                u.full_name as buyer_name,
+                u.email as buyer_email,
+                u.phone as buyer_phone
+            FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+            JOIN products p ON oi.product_id = p.product_id
+            JOIN users u ON o.buyer_id = u.user_id
+            WHERE p.farmer_id = ?
+            ORDER BY o.created_at DESC
+        `;
+
+        db.query(query, [farmerId], (err, results) => {
+            if (err) {
+                console.error('Database error fetching farmer notifications:', err);
+                return res.status(500).json({ message: 'Failed to fetch notifications' });
+            }
+
+            console.log('FARMER NOTIFICATIONS RETRIEVED:', results.length, 'notifications for farmer', farmerId);
+            res.json({ notifications: results });
+        });
+
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+// Admin order management endpoint - view all orders
+app.get('/admin/orders', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        const query = `
+            SELECT 
+                o.order_id,
+                o.buyer_id,
+                o.total_amount,
+                o.delivery_address,
+                o.payment_method,
+                o.status as order_status,
+                o.created_at as order_date,
+                oi.product_id,
+                oi.quantity,
+                oi.price,
+                p.product_name,
+                p.farmer_id,
+                u.full_name as buyer_name,
+                u.email as buyer_email,
+                u.phone as buyer_phone,
+                fu.full_name as farmer_name,
+                fu.email as farmer_email
+            FROM orders o
+            JOIN order_items oi ON o.order_id = oi.order_id
+            JOIN products p ON oi.product_id = p.product_id
+            JOIN users u ON o.buyer_id = u.user_id
+            JOIN farmers f ON p.farmer_id = f.farmer_id
+            JOIN users fu ON f.user_id = fu.user_id
+            ORDER BY o.created_at DESC
+        `;
+
+        db.query(query, (err, results) => {
+            if (err) {
+                console.error('Database error fetching admin orders:', err);
+                return res.status(500).json({ message: 'Failed to fetch orders' });
+            }
+
+            console.log('ADMIN ORDERS RETRIEVED:', results.length, 'orders');
+            res.json({ orders: results });
+        });
+
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+// Get admin images for home page slider (public endpoint)
+app.get('/admin/images/slider', (req, res) => {
+    const query = `
+        SELECT id, original_name, filename, path, category, created_at
+        FROM admin_images 
+        WHERE category = 'dashboard'
+        ORDER BY created_at DESC
+        LIMIT 10
+    `;
+
+    db.query(query, (err, results) => {
+        if (err) {
+            console.error('Database error fetching slider images:', err);
+            return res.status(500).json({ message: 'Failed to fetch slider images' });
+        }
+
+        // Add full URL to each image
+        const imagesWithUrls = results.map(image => ({
+            ...image,
+            url: `http://localhost:5000/${image.path}`
+        }));
+
+        console.log('SLIDER IMAGES RETRIEVED:', imagesWithUrls.length, 'images');
+        res.json({ images: imagesWithUrls });
+    });
+});
+
 // Get available farmers for buyers (secured)
 app.get('/buyer/farmers', auth.requireRole(['buyer']), (req, res) => {
     const query = `
@@ -2867,7 +3455,7 @@ app.get('/buyer/farmers', auth.requireRole(['buyer']), (req, res) => {
             COUNT(p.product_id) as product_count
         FROM users u
         JOIN farmers f ON u.user_id = f.user_id
-        LEFT JOIN products p ON u.user_id = p.farmer_id AND p.quantity > 0
+        LEFT JOIN products p ON f.farmer_id = p.farmer_id AND p.quantity > 0
         WHERE u.role = 'farmer' AND u.status = 'active'
         GROUP BY u.user_id, u.full_name, u.email, u.phone, f.location, f.farm_name, f.farmer_id
         ORDER BY product_count DESC, f.location ASC
@@ -2878,6 +3466,48 @@ app.get('/buyer/farmers', auth.requireRole(['buyer']), (req, res) => {
             console.error('Database error:', err);
             return res.status(500).json({ message: 'Failed to fetch farmers' });
         }
+        
+        console.log('BUYER FARMERS - Raw results:', results);
+        console.log('BUYER FARMERS - Query executed:');
+        console.log('BUYER FARMERS - Expected: user_id 106 should have farmer_id 45');
+        
+        results.forEach((farmer, index) => {
+            console.log(`FARMER ${index + 1}:`);
+            console.log('- user_id:', farmer.user_id);
+            console.log('- farmer_id:', farmer.farmer_id);
+            console.log('- full_name:', farmer.full_name);
+            console.log('- farmer_id type:', typeof farmer.farmer_id);
+            console.log('- farmer_id exists:', farmer.hasOwnProperty('farmer_id'));
+            console.log('- Complete farmer object:', farmer);
+            
+            // Special debugging for user_id 110
+            if (farmer.user_id === 110) {
+                console.log('*** DEBUGGING FARMER 110 ***');
+                console.log('- Found in /buyer/farmers endpoint');
+                console.log('- farmer_id returned:', farmer.farmer_id);
+                console.log('- This should be used for product filtering');
+            }
+        });
+        
+        // Additional debugging: Check farmers table directly for user_id 106
+        const checkFarmersQuery = 'SELECT * FROM farmers WHERE user_id = 106';
+        db.query(checkFarmersQuery, (err, farmerCheck) => {
+            if (err) {
+                console.error('Error checking farmers table:', err);
+            } else {
+                console.log('FARMERS TABLE - Direct check for user_id 106:', farmerCheck);
+            }
+        });
+        
+        // Check what farmer_id berwutete's products actually have
+        const checkProductsQuery = 'SELECT DISTINCT farmer_id FROM products WHERE farmer_id IN (SELECT farmer_id FROM farmers WHERE user_id = 106)';
+        db.query(checkProductsQuery, (err, productCheck) => {
+            if (err) {
+                console.error('Error checking products table:', err);
+            } else {
+                console.log('PRODUCTS TABLE - farmer_id for user_id 106:', productCheck);
+            }
+        });
         
         // Add distance calculation (mock for now)
         const farmersWithDistance = results.map(farmer => ({
@@ -3142,7 +3772,8 @@ app.post('/buyer/checkout', auth, auth.requireRole(['buyer']), (req, res) => {
                     SELECT p.product_name, p.quantity as available_stock,
                            p.farmer_id, u.full_name as farmer_name, u.email as farmer_email
                     FROM products p
-                    JOIN users u ON p.farmer_id = u.user_id
+                    JOIN farmers f ON p.farmer_id = f.farmer_id
+                    JOIN users u ON f.user_id = u.user_id
                     WHERE p.product_id = ?
                 `;
                 
@@ -3198,14 +3829,14 @@ app.post('/buyer/checkout', auth, auth.requireRole(['buyer']), (req, res) => {
             for (const item of orderItems) {
                 // Insert order item
                 const orderItemQuery = `
-                    INSERT INTO order_items (order_id, product_id, farmer_id, quantity, 
-                                            price, total, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, NOW())
+                    INSERT INTO order_items (order_id, product_id, quantity, 
+                                            price)
+                    VALUES (?, ?, ?, ?)
                 `;
                 
                 await new Promise((resolve, reject) => {
-                    db.query(orderItemQuery, [orderId, item.product_id, item.farmer_id, 
-                           item.quantity, item.price, item.total], (err, results) => {
+                    db.query(orderItemQuery, [orderId, item.product_id, 
+                           item.quantity, item.price], (err, results) => {
                         if (err) reject(err);
                         else resolve(results);
                     });
@@ -3464,6 +4095,7 @@ app.get('/farmer/products', (req, res) => {
             }
             
             const farmerId = farmerResult[0].farmer_id;
+            console.log('Fetching products for farmer_id:', farmerId, 'user_id:', decoded.user_id);
             console.log('Products query results (farmer_id=' + farmerId + '):');
             
             const { status, category, limit = 50, offset = 0 } = req.query;
@@ -3501,13 +4133,27 @@ app.get('/farmer/products', (req, res) => {
                     return res.status(500).json({ message: 'Failed to fetch products' });
                 }
                 
+                console.log('RAW QUERY RESULTS for farmer_id', farmerId, ':', results);
+                console.log('QUERY EXECUTED:', query);
+                console.log('PARAMETERS USED:', params);
+                
+                // Log each product's farmer_id to verify correct assignment
+                results.forEach((product, index) => {
+                    console.log(`PRODUCT ${index + 1}:`);
+                    console.log('- Product ID:', product.product_id);
+                    console.log('- Product Name:', product.product_name);
+                    console.log('- Farmer ID in product:', product.farmer_id);
+                    console.log('- Requesting Farmer ID:', farmerId);
+                    console.log('- Match:', product.farmer_id === farmerId ? 'YES' : 'NO');
+                });
+                
                 // Add full image path to each product
                 const productsWithImagePaths = results.map(product => ({
                     ...product,
                     image: product.image ? `uploads/products/${product.image}` : null
                 }));
                 
-                console.log('Products with image paths:', productsWithImagePaths);
+                console.log('FINAL PRODUCTS RETURNED for farmer_id', farmerId, ':', productsWithImagePaths);
                 res.json(productsWithImagePaths);
             });
         });
@@ -3547,6 +4193,40 @@ app.post('/farmer/products', upload.single('image'), (req, res) => {
             const farmerId = farmerResult[0].farmer_id;
             const { product_name, category, price, quantity, description } = req.body;
             
+            // Validate farmer_id consistency
+            if (farmerId !== decoded.user_id) {
+                console.log('FARMER_ID MISMATCH DETECTED - Fixing automatically');
+                console.log('- User ID:', decoded.user_id);
+                console.log('- Farmer ID:', farmerId);
+                
+                // Auto-fix the farmer_id to match user_id
+                const fixFarmerQuery = 'UPDATE farmers SET farmer_id = ? WHERE user_id = ?';
+                db.query(fixFarmerQuery, [decoded.user_id, decoded.user_id], (err) => {
+                    if (err) {
+                        console.error('Error fixing farmer_id:', err);
+                    } else {
+                        console.log('FARMER_ID FIXED AUTOMATICALLY');
+                    }
+                });
+                
+                // Use user_id as farmer_id for consistency
+                const correctedFarmerId = decoded.user_id;
+                
+                // Log farmer details for debugging
+                console.log('PRODUCT CREATION - User ID from JWT:', decoded.user_id);
+                console.log('PRODUCT CREATION - Corrected Farmer ID:', correctedFarmerId);
+                console.log('PRODUCT CREATION - Product details:', { product_name, category, price, quantity });
+                
+                // Continue with corrected farmer_id
+                createProductWithFarmerId(correctedFarmerId, req, res);
+                return;
+            }
+            
+            // Log farmer details for debugging
+            console.log('PRODUCT CREATION - User ID from JWT:', decoded.user_id);
+            console.log('PRODUCT CREATION - Farmer ID from database:', farmerId);
+            console.log('PRODUCT CREATION - Product details:', { product_name, category, price, quantity });
+            
             // Get image from file upload
             const image = req.file ? req.file.filename : '';
             
@@ -3575,11 +4255,18 @@ app.post('/farmer/products', upload.single('image'), (req, res) => {
             db.query(query, values, (err, result) => {
                 if (err) {
                     console.error('Database error:', err);
+                    console.error('Failed query:', query);
+                    console.error('Failed values:', values);
                     return res.status(500).json({ message: 'Failed to add product' });
                 }
                 
-                // Log product creation
-                console.log(`Product added: ${product_name} by farmer ${farmerId}`);
+                // Log product creation with full details
+                console.log('PRODUCT CREATED SUCCESSFULLY:');
+                console.log('- Product ID:', result.insertId);
+                console.log('- Product Name:', product_name);
+                console.log('- Farmer ID (from database):', farmerId);
+                console.log('- User ID (from JWT):', decoded.user_id);
+                console.log('- Values inserted:', values);
                 
                 res.status(201).json({
                     message: 'Product added successfully',

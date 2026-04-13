@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import API from '../api';
+import { useTranslation } from '../hooks/useTranslation';
 
 const FarmerDashboard = () => {
+  const { t } = useTranslation();
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -124,8 +126,9 @@ const FarmerDashboard = () => {
       const res = await API.get('/farmer/notifications', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setNotifications(res.data || []);
-      setUnreadCount(res.data?.filter(n => !n.read).length || 0);
+      const notificationsData = res.data.notifications || res.data || [];
+      setNotifications(notificationsData);
+      setUnreadCount(notificationsData?.filter(n => !n.read).length || notificationsData.length || 0);
     } catch (err) {
       console.error('Error fetching notifications:', err);
     }
@@ -365,16 +368,19 @@ const FarmerDashboard = () => {
 
                 {/* Notifications Dropdown */}
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-emerald-100 z-50 animate-slide-down">
-                    <div className="p-4 border-b border-emerald-100">
+                  <div className="absolute right-0 mt-2 w-96 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-emerald-100 z-[9999] animate-slide-down overflow-hidden">
+                    <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100">
                       <div className="flex justify-between items-center">
-                        <h3 className="font-semibold text-gray-900">Notifications</h3>
+                        <h3 className="font-semibold text-gray-900 flex items-center">
+                          <span className="mr-2 text-emerald-600">bell</span>
+                          {t('notifications')}
+                        </h3>
                         {unreadCount > 0 && (
                           <button
                             onClick={markAllNotificationsAsRead}
-                            className="text-sm text-emerald-600 hover:text-emerald-700"
+                            className="text-sm text-emerald-600 hover:text-emerald-700 font-medium hover:underline transition-colors"
                           >
-                            Mark all as read
+                            {t('markAllAsRead')}
                           </button>
                         )}
                       </div>
@@ -384,20 +390,27 @@ const FarmerDashboard = () => {
                         notifications.map(notification => (
                           <div
                             key={notification.id}
-                            className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                              !notification.read ? 'bg-emerald-50' : ''
+                            className={`p-4 border-b border-gray-100 hover:bg-emerald-50 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                              !notification.read ? 'bg-emerald-50/50 border-l-4 border-l-emerald-500' : ''
                             }`}
                             onClick={() => markNotificationAsRead(notification.id)}
                           >
                             <div className="flex items-start space-x-3">
-                              <span className="text-xl">
-                                {notification.type === 'order' ? 'package' : 
-                                 notification.type === 'order_update' ? 'file-text' : 'bell'}
-                              </span>
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                !notification.read ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                <span className="text-lg">
+                                  {notification.type === 'order' ? 'package' : 
+                                   notification.type === 'order_update' ? 'file-text' : 'bell'}
+                                </span>
+                              </div>
                               <div className="flex-1">
-                                <p className="font-medium text-gray-900">{notification.title}</p>
-                                <p className="text-sm text-gray-600">{notification.message}</p>
-                                <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+                                <p className={`font-medium ${!notification.read ? 'text-gray-900' : 'text-gray-700'}`}>{notification.title}</p>
+                                <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                                <p className="text-xs text-gray-500 mt-2 flex items-center">
+                                  <span className="mr-1">clock</span>
+                                  {notification.time}
+                                </p>
                               </div>
                               {!notification.read && (
                                 <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
@@ -408,7 +421,7 @@ const FarmerDashboard = () => {
                       ) : (
                         <div className="p-8 text-center text-gray-500">
                           <span className="text-3xl mb-2 block">bell</span>
-                          <p>No notifications</p>
+                          <p>{t('noNotifications')}</p>
                         </div>
                       )}
                     </div>
@@ -420,7 +433,7 @@ const FarmerDashboard = () => {
                 to="/add-product" 
                 className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-2 rounded-lg hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
-                grass Add Product
+                grass {t('addProduct')}
               </Link>
               
               <button 
@@ -431,7 +444,7 @@ const FarmerDashboard = () => {
                 }}
                 className="btn-danger flex items-center gap-2 hover-scale"
               >
-                <span>Logout</span>
+                <span>{t('logout')}</span>
                 <span>log-out</span>
               </button>
             </div>
@@ -447,8 +460,8 @@ const FarmerDashboard = () => {
             <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/10 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
             <div className="flex items-center justify-between mb-4 relative z-10">
               <div>
-                <h3 className="text-sm font-medium text-gray-600 mb-1">Active Products</h3>
-                <p className="text-xs text-emerald-600 font-semibold">Live listings</p>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">{t('activeProducts')}</h3>
+                <p className="text-xs text-emerald-600 font-semibold">{t('liveListings')}</p>
               </div>
               <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
                 <span className="text-white text-xl">grass</span>
@@ -459,7 +472,7 @@ const FarmerDashboard = () => {
             </p>
             <div className="flex items-center gap-2 text-xs text-gray-500 relative z-10">
               <span>trending-up</span>
-              <span>+12% this month</span>
+              <span>{t('growthThisMonth')}</span>
             </div>
           </div>
           
@@ -467,8 +480,8 @@ const FarmerDashboard = () => {
             <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
             <div className="flex items-center justify-between mb-4 relative z-10">
               <div>
-                <h3 className="text-sm font-medium text-gray-600 mb-1">Total Orders</h3>
-                <p className="text-xs text-blue-600 font-semibold">Customer orders</p>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">{t('totalOrders')}</h3>
+                <p className="text-xs text-blue-600 font-semibold">{t('customerOrders')}</p>
               </div>
               <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
                 <span className="text-white text-xl">package</span>
@@ -479,7 +492,7 @@ const FarmerDashboard = () => {
             </p>
             <div className="flex items-center gap-2 text-xs text-gray-500 relative z-10">
               <span>clock</span>
-              <span>3 pending today</span>
+              <span>{t('pendingToday')}</span>
             </div>
           </div>
           
@@ -487,8 +500,8 @@ const FarmerDashboard = () => {
             <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/10 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
             <div className="flex items-center justify-between mb-4 relative z-10">
               <div>
-                <h3 className="text-sm font-medium text-gray-600 mb-1">Total Earnings</h3>
-                <p className="text-xs text-amber-600 font-semibold">Revenue</p>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">{t('totalEarnings')}</h3>
+                <p className="text-xs text-amber-600 font-semibold">{t('revenue')}</p>
               </div>
               <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
                 <span className="text-white text-xl">dollar-sign</span>
@@ -499,7 +512,7 @@ const FarmerDashboard = () => {
             </p>
             <div className="flex items-center gap-2 text-xs text-gray-500 relative z-10">
               <span>trending-up</span>
-              <span>+8% this month</span>
+              <span>{t('earningsGrowth')}</span>
             </div>
           </div>
 
@@ -507,8 +520,8 @@ const FarmerDashboard = () => {
             <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-500"></div>
             <div className="flex items-center justify-between mb-4 relative z-10">
               <div>
-                <h3 className="text-sm font-medium text-gray-600 mb-1">Stock Alerts</h3>
-                <p className="text-xs text-purple-600 font-semibold">Low stock items</p>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">{t('stockAlerts')}</h3>
+                <p className="text-xs text-purple-600 font-semibold">{t('lowStockItems')}</p>
               </div>
               <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
                 <span className="text-white text-xl">alert-triangle</span>
@@ -519,7 +532,7 @@ const FarmerDashboard = () => {
             </p>
             <div className="flex items-center gap-2 text-xs text-gray-500 relative z-10">
               <span>refresh-cw</span>
-              <span>Needs restocking</span>
+              <span>{t('needsRestocking')}</span>
             </div>
           </div>
         </div>
@@ -528,15 +541,15 @@ const FarmerDashboard = () => {
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-emerald-100 mb-8 hover:shadow-2xl transition-all duration-300">
           <div className="px-6 py-4 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-t-2xl">
             <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-              <span className="mr-2">file-text</span> Recent Orders
+              <span className="mr-2">file-text</span> {t('recentOrders')}
             </h2>
           </div>
           <div className="p-6">
             {orders.length === 0 ? (
               <div className="text-center py-8">
                 <span className="text-4xl mb-2 block">package</span>
-                <p className="text-gray-500">No orders yet</p>
-                <p className="text-sm text-gray-400 mt-1">Your orders will appear here</p>
+                <p className="text-gray-500">{t('noOrdersYet')}</p>
+                <p className="text-sm text-gray-400 mt-1">{t('ordersWillAppearHere')}</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -572,12 +585,12 @@ const FarmerDashboard = () => {
           <div className="px-6 py-4 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-t-2xl">
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-                <span className="mr-2">grass</span> Your Products
+                <span className="mr-2">grass</span> {t('yourProducts')}
               </h2>
               <div className="flex items-center space-x-4">
                 <input
                   type="text"
-                  placeholder="Search products..."
+                  placeholder={t('searchProducts')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="px-3 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -587,20 +600,20 @@ const FarmerDashboard = () => {
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="px-3 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
-                  <option value="all">All Products</option>
-                  <option value="in_stock">In Stock</option>
-                  <option value="low_stock">Low Stock</option>
-                  <option value="out_of_stock">Out of Stock</option>
+                  <option value="all">{t('allProducts')}</option>
+                  <option value="in_stock">{t('inStock')}</option>
+                  <option value="low_stock">{t('lowStock')}</option>
+                  <option value="out_of_stock">{t('outOfStock')}</option>
                 </select>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="px-3 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 >
-                  <option value="name">Sort by Name</option>
-                  <option value="price">Sort by Price</option>
-                  <option value="stock">Sort by Stock</option>
-                  <option value="date">Sort by Date</option>
+                  <option value="name">{t('sortByName')}</option>
+                  <option value="price">{t('sortByPrice')}</option>
+                  <option value="stock">{t('sortByStock')}</option>
+                  <option value="date">{t('sortByDate')}</option>
                 </select>
               </div>
             </div>
@@ -609,13 +622,13 @@ const FarmerDashboard = () => {
             {filteredProducts.length === 0 ? (
               <div className="text-center py-8">
                 <span className="text-4xl mb-2 block">grass</span>
-                <p className="text-gray-500">No products found</p>
-                <p className="text-sm text-gray-400 mt-1">Add your first product to get started</p>
+                <p className="text-gray-500">{t('noProductsFound')}</p>
+                <p className="text-sm text-gray-400 mt-1">{t('addFirstProduct')}</p>
                 <Link
                   to="/add-product"
                   className="inline-block mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
                 >
-                  Add Product
+                  {t('addProduct')}
                 </Link>
               </div>
             ) : (
@@ -654,8 +667,8 @@ const FarmerDashboard = () => {
                           product.quantity <= 10 ? 'bg-yellow-100 text-yellow-800' :
                           'bg-green-100 text-green-800'
                         }`}>
-                          {product.quantity === 0 ? 'Out of Stock' :
-                           product.quantity <= 10 ? 'Low Stock' : 'In Stock'}
+                          {product.quantity === 0 ? t('outOfStock') :
+                           product.quantity <= 10 ? t('lowStock') : t('inStock')}
                         </span>
                       </div>
                     </div>
@@ -667,7 +680,7 @@ const FarmerDashboard = () => {
                     
                     <div className="flex justify-between items-center mb-3">
                       <span className="text-lg font-bold text-emerald-600">${product.price}</span>
-                      <span className="text-sm text-gray-500">{product.quantity} units</span>
+                      <span className="text-sm text-gray-500">{product.quantity} {t('units')}</span>
                     </div>
                     
                     <div className="flex space-x-2">
@@ -692,6 +705,19 @@ const FarmerDashboard = () => {
                       </button>
                       <button
                         onClick={() => {
+                          setSelectedProduct(product);
+                          setShowProductModal(true);
+                        }}
+                        className="px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm flex items-center"
+                      >
+                        <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C2.458 8 6 8 8s6 5.542 6 12 5.542 12 12 5.542 6 12 5.542 6 12z" />
+                        </svg>
+                        {t('viewDetails')}
+                      </button>
+                      <button
+                        onClick={() => {
                           setProductToDelete(product.product_id);
                           setShowDeleteModal(true);
                         }}
@@ -712,9 +738,9 @@ const FarmerDashboard = () => {
       {showAddStockModal && stockProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Add Stock - {stockProduct.product_name}</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('addStock')} - {stockProduct.product_name}</h3>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Quantity to Add</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('quantityToAdd')}</label>
               <input
                 type="number"
                 min="1"
@@ -749,9 +775,9 @@ const FarmerDashboard = () => {
       {showPriceModal && priceProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Update Price - {priceProduct.product_name}</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('updatePrice')} - {priceProduct.product_name}</h3>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">New Price</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('newPrice')}</label>
               <input
                 type="number"
                 min="0"
@@ -783,18 +809,111 @@ const FarmerDashboard = () => {
         </div>
       )}
 
+      {/* Product Detail Modal */}
+      {showProductModal && selectedProduct && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+                <svg className="w-5 h-5 mr-2 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C2.458 8 6 8 8s6 5.542 6 12 5.542 12 12 5.542 6 12z" />
+                </svg>
+                {t('productDetails')}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowProductModal(false);
+                  setSelectedProduct(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{t('productImage')}</h4>
+                  <div className="aspect-square w-full bg-gray-200 dark:bg-gray-600 rounded-lg overflow-hidden flex items-center justify-center">
+                    {selectedProduct.image || selectedProduct.image_url ? (
+                      <img
+                        src={`http://localhost:5000/${selectedProduct.image || selectedProduct.image_url}`}
+                        alt={selectedProduct.product_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-4xl text-gray-400">🌾</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{t('productName')}</h4>
+                    <p className="text-lg text-gray-800 dark:text-gray-200">{selectedProduct.product_name}</p>
+                  </div>
+
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{t('description')}</h4>
+                    <p className="text-gray-600 dark:text-gray-400">{selectedProduct.description || t('noDescriptionAvailable')}</p>
+                  </div>
+
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{t('price')}</h4>
+                    <p className="text-2xl font-bold text-emerald-600">${selectedProduct.price}</p>
+                  </div>
+
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{t('stock')}</h4>
+                    <p className="text-lg text-gray-800 dark:text-gray-200">{selectedProduct.quantity} {t('units')}</p>
+                  </div>
+
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{t('status')}</h4>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      selectedProduct.quantity === 0 ? 'bg-red-100 text-red-800' :
+                      selectedProduct.quantity <= 10 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {selectedProduct.quantity === 0 ? t('outOfStock') :
+                       selectedProduct.quantity <= 10 ? t('lowStock') : t('inStock')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={() => {
+                    setShowProductModal(false);
+                    setSelectedProduct(null);
+                  }}
+                  className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  {t('close')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Delete Product</h3>
-            <p className="text-gray-600 mb-6">Are you sure you want to delete this product? This action cannot be undone.</p>
+            <h3 className="text-lg font-semibold mb-4">{t('deleteProduct')}</h3>
+            <p className="text-gray-600 mb-6">{t('areYouSureToDeleteThisProduct')}</p>
             <div className="flex space-x-3">
               <button
                 onClick={deleteProduct}
                 className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
-                Delete
+                {t('delete')}
               </button>
               <button
                 onClick={() => {
@@ -803,7 +922,7 @@ const FarmerDashboard = () => {
                 }}
                 className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
               >
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </div>

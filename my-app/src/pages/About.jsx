@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
-import { useNewTranslation } from "../hooks/useNewTranslation";
+import { useTranslation } from "../hooks/useTranslation";
 
 const About = () => {
-    const { t } = useNewTranslation();
+    const { t } = useTranslation();
     const [isVisible, setIsVisible] = useState({});
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [scrollProgress, setScrollProgress] = useState(0);

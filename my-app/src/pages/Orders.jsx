@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import API from "../api";
-import { useNewTranslation } from "../hooks/useNewTranslation";
+import { useTranslation } from "../hooks/useTranslation";
 import { useDatabaseTranslation } from "../hooks/useDatabaseTranslation";
 
 function Orders() {
-    const { t } = useNewTranslation();
+    const { t } = useTranslation();
     const { useTranslatedOrders } = useDatabaseTranslation();
     const [orders, setOrders] = useState([]);
     const translatedOrders = useTranslatedOrders(orders);

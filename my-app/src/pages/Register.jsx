@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import API from "../api";
 import { useNavigate, Link } from "react-router-dom";
-import { useNewTranslation } from "../hooks/useNewTranslation";
+import { useTranslation } from "../hooks/useTranslation";
 
 function Register() {
   const navigate = useNavigate();
-  const { t } = useNewTranslation();
+  const { t } = useTranslation();
 
   const [form, setForm] = useState({
     full_name: "",

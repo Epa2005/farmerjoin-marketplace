@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import API from "../api";
 import { useNavigate, useParams } from "react-router-dom";
-import { useNewTranslation } from "../hooks/useNewTranslation";
+import { useTranslation } from "../hooks/useTranslation";
 
 function EditProfile() {
     const { farmerId } = useParams();
     const navigate = useNavigate();
-    const { t } = useNewTranslation();
+    const { t } = useTranslation();
     const [profile, setProfile] = useState({
         full_name: "",
         farm_name: "",

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useUserHelp } from '../hooks/useUserHelp';
-import { useNewTranslation } from '../hooks/useNewTranslation';
+import { useTranslation } from '../hooks/useTranslation';
 import HelpButton from '../components/HelpButton';
 import SystemAssistant from '../components/SystemAssistant';
 
 const Help = () => {
-  const { t } = useNewTranslation();
+  const { t } = useTranslation();
   const { searchHelp, getContextualHelp, helpData } = useUserHelp();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);

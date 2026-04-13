@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import API from "../api";
-import { useNewTranslation } from "../hooks/useNewTranslation";
+import { useTranslation } from "../hooks/useTranslation";
 
 function Dashboard() {
-    const { t } = useNewTranslation();
+    const { t } = useTranslation();
     const [user, setUser] = useState(null);
     const [stats, setStats] = useState({
         products: 0,

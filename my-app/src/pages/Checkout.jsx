@@ -3,12 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import API from '../api';
 import axios from 'axios';
 import { useCart } from '../context/CartContext';
-import { useNewTranslation } from '../hooks/useNewTranslation';
+import { useTranslation } from '../hooks/useTranslation';
 
 const Checkout = () => {
   const { items, getCartTotal, clearCart } = useCart();
   const navigate = useNavigate();
-  const { t } = useNewTranslation();
+  const { t } = useTranslation();
   
   // Helper function to fix image URLs
   const fixImageUrl = (imageUrl) => {

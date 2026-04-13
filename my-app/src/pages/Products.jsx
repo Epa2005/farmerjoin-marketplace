@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import API from "../api";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useNewTranslation } from "../hooks/useNewTranslation";
+import { useTranslation } from "../hooks/useTranslation";
 import { useDatabaseTranslation } from "../hooks/useDatabaseTranslation";
 import { useCart } from "../context/CartContext";
 
 function Products() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { t } = useNewTranslation();
+    const { t } = useTranslation();
     const { useTranslatedProducts } = useDatabaseTranslation();
     const { selectedFarmer, setSelectedFarmer, clearSelectedFarmer } = useCart();
     const [products, setProducts] = useState([]);
@@ -60,11 +60,21 @@ function Products() {
 
     // Handler functions
     const handleFarmerSelection = (farmer) => {
+        console.log('Selected farmer object:', farmer);
         setSelectedFarmer(farmer);
         setShowFarmerSelector(false);
-        // Filter products by selected farmer
-        API.get(`/products?farmer_id=${farmer.user_id}`)
+        // Filter products by selected farmer - use farmer_id or user_id as fallback
+        const farmerId = farmer.farmer_id || farmer.user_id;
+        console.log('Using farmer_id:', farmerId, 'for farmer:', farmer.farmer_name || farmer.full_name);
+        
+        if (!farmerId) {
+            console.error('No farmer_id found in farmer object:', farmer);
+            return;
+        }
+        
+        API.get(`/products?farmer_id=${farmerId}`)
             .then(res => {
+                console.log('Filtered products for farmer:', farmer.farmer_name || farmer.full_name, res.data);
                 setProducts(res.data || []);
             })
             .catch(err => {
@@ -281,7 +291,7 @@ function Products() {
                                     <div className="relative h-52 bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-2xl overflow-hidden">
                                         {product.image || product.image_url ? (
                                             <img 
-                                                src={`http://localhost:5000/${product.image || product.image_url}`} 
+                                                src={product.image?.startsWith('uploads/') ? `http://localhost:5000/${product.image}` : `http://localhost:5000/uploads/products/${product.image || product.image_url}`} 
                                                 alt={product.product_name}
                                                 className="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
                                                 onError={(e) => {
@@ -326,7 +336,7 @@ function Products() {
                                         </h3>
                                         <p className="text-sm text-gray-600 mb-3 flex items-center">
                                             <span className="mr-1">🧑‍🌾</span>
-                                            {product.full_name || 'Local Farmer'}
+                                            {product.farmer_name || 'Local Farmer'}
                                         </p>
                                         <div className="flex items-center justify-between mb-3">
                                             <span className="badge badge-info">

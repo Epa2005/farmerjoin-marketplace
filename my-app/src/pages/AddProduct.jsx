@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import API from "../api";
 import { useNavigate, Link } from "react-router-dom";
-import { useNewTranslation } from "../hooks/useNewTranslation";
+import { useTranslation } from "../hooks/useTranslation";
 
 function AddProduct() {
     const navigate = useNavigate();
-    const { t } = useNewTranslation();
+    const { t } = useTranslation();
     const fileInputRef = useRef(null);
     
     const [product, setProduct] = useState({

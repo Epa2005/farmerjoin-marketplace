@@ -1,11 +1,11 @@
 import { useState } from "react";
 import API from "../api";
 import { useNavigate, Link } from "react-router-dom";
-import { useNewTranslation } from "../hooks/useNewTranslation";
+import { useTranslation } from "../hooks/useTranslation";
 
 function ForgotPassword() {
   const navigate = useNavigate();
-  const { t } = useNewTranslation();
+  const { t } = useTranslation();
   const [step, setStep] = useState(1); // Step 1: Email verification, Step 2: Password reset
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");

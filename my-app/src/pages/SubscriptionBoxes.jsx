@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useNewTranslation } from '../hooks/useNewTranslation';
+import { useTranslation } from '../hooks/useTranslation';
 
 const SubscriptionBoxes = () => {
-  const { t } = useNewTranslation();
+  const { t } = useTranslation();
   const [selectedBox, setSelectedBox] = useState(null);
   const [deliveryFrequency, setDeliveryFrequency] = useState('weekly');
 

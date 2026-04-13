@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../api';
-import { useNewTranslation } from '../hooks/useNewTranslation';
+import { useTranslation } from '../hooks/useTranslation';
 
 const CooperativeDashboard = () => {
-  const { t } = useNewTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [cooperativeData, setCooperativeData] = useState(null);
   const [loading, setLoading] = useState(true);

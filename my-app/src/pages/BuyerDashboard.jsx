@@ -2,12 +2,12 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api";
-import { useNewTranslation } from "../hooks/useNewTranslation";
+import { useTranslation } from "../hooks/useTranslation";
 import { useCart } from "../context/CartContext";
 
 function BuyerDashboard() {
   const navigate = useNavigate();
-  const { t, language, updateKey } = useNewTranslation();
+  const { t } = useTranslation();
   const { selectedFarmer, setSelectedFarmer, clearSelectedFarmer } = useCart();
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({

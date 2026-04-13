@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import API from '../api';
 import { useCart } from '../context/CartContext';
-import { useNewTranslation } from '../hooks/useNewTranslation';
+import { useTranslation } from '../hooks/useTranslation';
 
 const FarmerProfile = () => {
-  const { t } = useNewTranslation();
+  const { t } = useTranslation();
   const { farmerId } = useParams();
   const { addToCart } = useCart();
   const [farmer, setFarmer] = useState(null);

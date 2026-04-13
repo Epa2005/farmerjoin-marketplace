@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminSettings from "./pages/AdminSettings";
 import FarmerDashboard from "./pages/FarmerDashboard";
 import BuyerDashboard from "./pages/BuyerDashboard";
 import CooperativeDashboard from "./pages/CooperativeDashboard";
@@ -70,6 +71,16 @@ function App() {
               element={
                 <ProtectedRoute role="admin">
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Admin Settings (protected) */}
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminSettings />
                 </ProtectedRoute>
               }
             />

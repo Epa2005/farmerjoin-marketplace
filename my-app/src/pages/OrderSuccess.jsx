@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useNewTranslation } from '../hooks/useNewTranslation';
+import { useTranslation } from '../hooks/useTranslation';
 
 const OrderSuccess = () => {
-  const { t } = useNewTranslation();
+  const { t } = useTranslation();
   const location = useLocation();
   const [orderDetails, setOrderDetails] = useState(null);
 
