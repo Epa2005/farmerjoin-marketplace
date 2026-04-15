@@ -27,6 +27,10 @@ function AdminDashboard() {
     password: "",
     cooperative_name: "",
     location: "",
+    province: "",
+    district: "",
+    sector: "",
+    cell: "",
     role: "farmer"
   });
   const [creating, setCreating] = useState(false);
@@ -103,12 +107,20 @@ function AdminDashboard() {
       const token = localStorage.getItem("token");
       let response;
       
+      // Create structured location data for backend
+      const formData = {
+        ...createForm,
+        location: createForm.province && createForm.district && createForm.sector 
+          ? `${createForm.province},${createForm.district},${createForm.sector}${createForm.cell ? ',' + createForm.cell : ''}`
+          : createForm.location
+      };
+      
       if (createForm.role === "farmer") {
-        response = await API.post("/farmers/admin/create-farmer", createForm, {
+        response = await API.post("/farmers/admin/create-farmer", formData, {
           headers: { Authorization: `Bearer ${token}` }
         });
       } else {
-        response = await API.post("/cooperative/admin/create-cooperative", createForm, {
+        response = await API.post("/cooperative/admin/create-cooperative", formData, {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
@@ -122,6 +134,10 @@ function AdminDashboard() {
           password: "",
           cooperative_name: "",
           location: "",
+          province: "",
+          district: "",
+          sector: "",
+          cell: "",
           role: "farmer"
         });
         // Refresh farmers list
@@ -525,7 +541,10 @@ function AdminDashboard() {
                           {farmer.phone}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          {farmer.location || t('notSpecified')}
+                          {farmer.province && farmer.district && farmer.sector 
+                            ? `${farmer.province}, ${farmer.district}, ${farmer.sector}${farmer.cell ? ', ' + farmer.cell : ''}`
+                            : farmer.location || t('notSpecified')
+                          }
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                           {farmer.created_at_formatted}
@@ -566,7 +585,7 @@ function AdminDashboard() {
         {/* Create Farmer Modal */}
         {showCreateModal && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 border border-gray-200 dark:border-gray-700 shadow-2xl">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 border border-gray-200 dark:border-gray-700 shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
                   {createForm.role === 'farmer' ? t('createFarmerAccount') : t('createCooperativeAccount')}
@@ -608,8 +627,20 @@ function AdminDashboard() {
                     </div>
                   )}
                   <div className="flex items-center text-xs">
-                    <div className={`w-3 h-3 rounded-full mr-2 ${createForm.location ? 'bg-emerald-500' : 'bg-gray-300'}`}></div>
-                    <span className="text-gray-600 dark:text-gray-400">{t('location')}</span>
+                    <div className={`w-3 h-3 rounded-full mr-2 ${createForm.province ? 'bg-emerald-500' : 'bg-gray-300'}`}></div>
+                    <span className="text-gray-600 dark:text-gray-400">{t('province')}</span>
+                  </div>
+                  <div className="flex items-center text-xs">
+                    <div className={`w-3 h-3 rounded-full mr-2 ${createForm.district ? 'bg-emerald-500' : 'bg-gray-300'}`}></div>
+                    <span className="text-gray-600 dark:text-gray-400">{t('district')}</span>
+                  </div>
+                  <div className="flex items-center text-xs">
+                    <div className={`w-3 h-3 rounded-full mr-2 ${createForm.sector ? 'bg-emerald-500' : 'bg-gray-300'}`}></div>
+                    <span className="text-gray-600 dark:text-gray-400">{t('sector')}</span>
+                  </div>
+                  <div className="flex items-center text-xs">
+                    <div className={`w-3 h-3 rounded-full mr-2 ${createForm.cell ? 'bg-emerald-500' : 'bg-gray-300'}`}></div>
+                    <span className="text-gray-600 dark:text-gray-400">{t('cell')}</span>
                   </div>
                   <div className="flex items-center text-xs">
                     <div className={`w-3 h-3 rounded-full mr-2 ${createForm.password ? 'bg-emerald-500' : 'bg-gray-300'}`}></div>
@@ -622,15 +653,18 @@ function AdminDashboard() {
                     <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                       {(() => {
                         let filled = 0;
-                        let total = 6;
+                        let total = 9;
                         if (createForm.role) filled++;
                         if (createForm.full_name) filled++;
                         if (createForm.email) filled++;
                         if (createForm.phone) filled++;
-                        if (createForm.location) filled++;
+                        if (createForm.province) filled++;
+                        if (createForm.district) filled++;
+                        if (createForm.sector) filled++;
+                        if (createForm.cell) filled++;
                         if (createForm.password) filled++;
                         if (createForm.role === 'cooperative') {
-                          total = 7;
+                          total = 10;
                           if (createForm.cooperative_name) filled++;
                         }
                         return `${Math.round((filled / total) * 100)}%`;
@@ -715,13 +749,55 @@ function AdminDashboard() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    {t('location')}
+                    {t('province')}
                   </label>
                   <input
                     type="text"
-                    value={createForm.location}
-                    onChange={(e) => setCreateForm({...createForm, location: e.target.value})}
-                    placeholder={t('enterLocation')}
+                    value={createForm.province}
+                    onChange={(e) => setCreateForm({...createForm, province: e.target.value})}
+                    placeholder={t('enterProvince')}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('district')}
+                  </label>
+                  <input
+                    type="text"
+                    value={createForm.district}
+                    onChange={(e) => setCreateForm({...createForm, district: e.target.value})}
+                    placeholder={t('enterDistrict')}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('sector')}
+                  </label>
+                  <input
+                    type="text"
+                    value={createForm.sector}
+                    onChange={(e) => setCreateForm({...createForm, sector: e.target.value})}
+                    placeholder={t('enterSector')}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('cell')}
+                  </label>
+                  <input
+                    type="text"
+                    value={createForm.cell}
+                    onChange={(e) => setCreateForm({...createForm, cell: e.target.value})}
+                    placeholder={t('enterCell')}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                     required
                   />

@@ -11,15 +11,15 @@
   "home": {
     "welcome": "Murakaza neza kuri FarmerJoin",
     "tagline": "Guhugura abahinzi n'abaguzi. Ibikoresho bishya, ibiciro bikwiye, n'ubuhinzi bugendana n'iterambere kuri bose.",
-    "join_as_farmer": "Jyira nk'uhinzi",
+    "join_as_farmer": "Jyira nk'umuhinzi",
     "browse_products": "Rondera ibicuruzwa",
-    "why_choose": "None ni aka kagiye k'FarmerJoin?",
+    "why_choose": "None ni iyihe mpamvu ya'FarmerJoin?",
     "fair_prices": "Ibiciro bikwiye",
     "fair_prices_desc": "Fata ibiciro bikwiye kugicuruzwa cyawe utari ikigega cy'ibitegura",
     "fresh_produce": "Ibikoresho bishya",
     "fresh_produce_desc": "Kugira uruhushya rw'ibikoresho bishya bahinze mu Rwanda",
     "trusted_platform": "Ikiganiro gikwiye",
-    "trusted_platform_desc": "Ikiganiro gituma abahinzi n'abaguzi bashyirana amakuru",
+    "trusted_platform_desc": "Ikiganiro gituma abahinzi n'abaguzi bamenya amakuru",
     "ready_to_start": "Urashaka gutangira?",
     "ready_to_start_desc": "Jya mu baguzi n'abahinzi batandatanje bari bifashisha FarmerJoin",
     "register_now": "Iyandikishe nonaha"
@@ -74,15 +74,15 @@
   
   "products": {
     "title": "Ibicuruzwa",
-    "search": "Rondera",
-    "filter": "H把关",
+    "search": "Shaka",
+    "filter": "Hitamo",
     "no_products": "Nta bicuruzwa bibonetse",
-    "add_product": "Ongeramo icuruzwa",
+    "add_product": "Ongeramo ibicuruzwa",
     "price": "Igiciro",
     "quantity": "Ingano",
     "description": "Ibisobanuro",
     "category": "Ubwoko",
-    "farmer": "Uhinzi",
+    "farmer": "Umuhinzi",
     "contact": "Twandikire"
   },
   
@@ -90,7 +90,7 @@
     "title": "Idashboardi",
     "welcome": "Murakaza neza",
     "my_products": "Ibicuruzwa byanjye",
-    "add_product": "Ongeramo icuruzwa",
+    "add_product": "Ongeramo ibicuruzwa",
     "orders": "Ibitekerezo",
     "profile": "Umwirondoro",
     "settings": "Igenamiterwe",
@@ -100,9 +100,9 @@
   },
   
   "add_product": {
-    "title": "Ongeramo icuruzwa",
+    "title": "Ongeramo ibicuruzwa",
     "name": "Izina",
-    "name_placeholder": "Andika izina ry'icuruzwa",
+    "name_placeholder": "Andika izina ry'ibicuruzwa",
     "price": "Igiciro",
     "price_placeholder": "Andika igiciro",
     "quantity": "Ingano",
@@ -114,8 +114,8 @@
     "image": "Ishusho",
     "submit": "Ohereza",
     "submitting": "Ohereza...",
-    "success": "Ic uruzwa ryongewe neza!",
-    "failed": "Kongera icuruzwa kirashatse. Gerageza none."
+    "success": "Icuruzwa ryongewe neza!",
+    "failed": "nti bikunze. Gerageza none."
   },
   
   "about": {
@@ -133,7 +133,7 @@
     "error": "Habaye ikosa",
     "success": "Byakunze",
     "save": "Bika",
-    "cancel": "Futa",
+    "cancel": "reka",
     "edit": "Hindura",
     "delete": "Siba",
     "confirm": "Emeza",

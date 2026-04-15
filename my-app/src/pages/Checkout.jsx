@@ -28,6 +28,8 @@ const Checkout = () => {
     paymentMethod: 'cod'
   });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(null);
+  const [paymentId, setPaymentId] = useState(null);
 
   const subtotal = getCartTotal();
   const deliveryFee = 5;
@@ -210,13 +212,37 @@ const Checkout = () => {
       console.log('Token:', token.substring(0, 50) + '...');
       console.log('User:', user);
 
-      // SIMPLE DIRECT APPROACH - Use API instance with token interceptor
-      console.log('Using API instance with token interceptor...');
-      const response = await API.post('/buyer/checkout', orderData);
+      let response;
+      
+      // Check if mobile money payment is selected
+      if (formData.paymentMethod === 'mobile_money') {
+        if (!formData.phone) {
+          alert('Phone number is required for mobile money payment');
+          setIsProcessing(false);
+          return;
+        }
+
+        console.log('=== MOBILE MONEY CHECKOUT ===');
+        const mobileMoneyData = {
+          buyer_id: user.user_id,
+          cart_items: orderData.cart_items,
+          total_amount: orderData.total_amount,
+          phone_number: formData.phone,
+          delivery_address: orderData.delivery_address
+        };
+
+        console.log('Mobile money data:', mobileMoneyData);
+        response = await API.post('/api/mobile-money/checkout', mobileMoneyData);
+      } else {
+        // Regular checkout for other payment methods
+        console.log('Using API instance with token interceptor...');
+        response = await API.post('/buyer/checkout', orderData);
+      }
 
       console.log('Checkout successful:', response.data);
 
       if (response.data.success) {
+        alert(response.data.message || 'Order placed successfully!');
         clearCart();
         navigate('/order-success', { 
           state: { 

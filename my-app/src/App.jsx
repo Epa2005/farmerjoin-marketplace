@@ -23,6 +23,7 @@ import OrderSuccess from "./pages/OrderSuccess";
 import FarmerProfile from "./pages/FarmerProfile";
 import SubscriptionBoxes from "./pages/SubscriptionBoxes";
 import UserManagement from "./pages/UserManagement";
+import SubAdminDashboard from "./pages/SubAdminDashboard";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
@@ -111,6 +112,16 @@ function App() {
               element={
                 <ProtectedRoute role="admin">
                   <UserManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Sub Admin Dashboard (protected for sub_admins) */}
+            <Route
+              path="/sub-admin-dashboard"
+              element={
+                <ProtectedRoute role="sub_admin">
+                  <SubAdminDashboard />
                 </ProtectedRoute>
               }
             />

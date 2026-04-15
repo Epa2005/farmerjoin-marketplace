@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sub Admin Dashboard - FarmerJoin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body{background:#f6f9fc}
+    .card-stats{border-left:4px solid #0d6efd}
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h4">Sub Admin Dashboard</h1>
+      <div>
+        <button id="refreshBtn" class="btn btn-sm btn-outline-primary">Refresh</button>
+      </div>
+    </div>
+
+    <div id="topStats" class="row g-3 mb-4">
+      <!-- stats cards populated by JS -->
+    </div>
+
+    <div class="card">
+      <div class="card-header">Managed Farmers / Cooperatives</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-striped mb-0" id="managedTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Location</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const apiBase = '/user-management'; // adjust if route mounted differently
+    async function fetchStats(){
+      const res = await fetch(apiBase + '/statistics', { headers: { 'Authorization': localStorage.getItem('token') || '' } });
+      if(!res.ok) return null;
+      return res.json();
+    }
+
+    async function fetchManaged(){
+      const res = await fetch(apiBase + '/managed-users', { headers: { 'Authorization': localStorage.getItem('token') || '' } });
+      if(!res.ok) return [];
+      return res.json();
+    }
+
+    function renderStats(s){
+      const container = document.getElementById('topStats');
+      container.innerHTML = '';
+      const cards = [
+        {label:'Total Users', value: s.total_users},
+        {label:'Active', value: s.active_users},
+        {label:'Banned', value: s.banned_users},
+        {label:'Suspended', value: s.suspended_users}
+      ];
+
+      cards.forEach(c=>{
+        const col = document.createElement('div'); col.className='col-6 col-md-3';
+        col.innerHTML = `<div class="card card-stats p-2"><div class="card-body"><div class="small text-muted">${c.label}</div><div class="h5">${c.value||0}</div></div></div>`;
+        container.appendChild(col);
+      });
+    }
+
+    function renderManaged(list){
+      const tbody = document.querySelector('#managedTable tbody');
+      tbody.innerHTML = '';
+      list.forEach((u,i)=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td>${u.full_name}</td>
+          <td>${u.email}</td>
+          <td>${u.location||''}</td>
+          <td>${u.role}</td>
+          <td>${u.status||'active'}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-danger" onclick="ban('${u.user_id}')">Ban</button>
+            <button class="btn btn-sm btn-outline-warning" onclick="suspend('${u.user_id}')">Suspend</button>
+            <button class="btn btn-sm btn-outline-success" onclick="unban('${u.user_id}')">Unban</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function ban(id){
+      if(!confirm('Ban this user?')) return;
+      await fetch(apiBase+`/${id}/ban`, { method:'PUT', headers: {'Content-Type':'application/json', 'Authorization': localStorage.getItem('token')||''}, body: JSON.stringify({ reason: 'Action by sub_admin' }) });
+      loadAll();
+    }
+    async function unban(id){ await fetch(apiBase+`/${id}/unban`, { method:'PUT', headers: {'Authorization': localStorage.getItem('token')||''} }); loadAll(); }
+    async function suspend(id){ if(!confirm('Suspend this user?')) return; await fetch(apiBase+`/${id}/suspend`, { method:'PUT', headers: {'Content-Type':'application/json','Authorization': localStorage.getItem('token')||''}, body: JSON.stringify({ reason: 'Action by sub_admin' }) }); loadAll(); }
+
+    async function loadAll(){
+      const s = await fetchStats(); if(s) renderStats(s);
+      const m = await fetchManaged(); renderManaged(m);
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadAll);
+    loadAll();
+  </script>
+</body>
+</html>

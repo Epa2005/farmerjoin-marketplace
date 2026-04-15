@@ -31,6 +31,9 @@ const AuthRedirect = () => {
       } else if (userRole === "admin") {
         console.log("Redirecting to admin dashboard");
         navigate("/admin-dashboard");
+      } else if (userRole === "sub_admin") {
+        console.log("Redirecting to sub admin dashboard");
+        navigate("/sub-admin-dashboard");
       } else {
         // Default to dashboard for farmers, otherwise home
         console.log("Unknown role, defaulting to farmer dashboard");

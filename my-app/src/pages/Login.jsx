@@ -48,6 +48,7 @@ function Login() {
         if (userRole === "buyer") targetRoute = "/buyer-dashboard";
         else if (userRole === "farmer") targetRoute = "/dashboard";
         else if (userRole === "cooperative") targetRoute = "/dashboard"; // Cooperatives also use the main dashboard
+        else if (userRole === "sub_admin") targetRoute = "/sub-admin-dashboard";
         else if (userRole === "admin") targetRoute = "/admin-dashboard";
         else targetRoute = "/dashboard"; // Default to dashboard for any farmer-like role
         

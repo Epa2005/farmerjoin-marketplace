@@ -13,6 +13,31 @@ const axios = require('axios'); // Add axios for web scraping
 // Import authentication middleware
 const auth = require('./middleware/auth');
 
+// Import mobile money checkout routes
+const mobileMoneyRoutes = require('./mobileMoneyCheckout');
+
+// Import SMS service for notifications
+const smsService = require('./services/smsService');
+
+// Middleware to check if user is admin or sub_admin
+const isAdminOrSubAdmin = (req, res, next) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+    
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'student');
+        if (decoded.role !== 'admin' && decoded.role !== 'sub_admin') {
+            return res.status(403).json({ message: 'Access denied. Admin or Sub Admin required.' });
+        }
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+};
+
 // Import security middleware
 const {
   generalLimiter,
@@ -42,6 +67,9 @@ app.use(generalLimiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Mount mobile money checkout routes
+app.use('/api', mobileMoneyRoutes);
+
 // Secure session configuration
 app.use(session({
     secret: process.env.SESSION_SECRET || 'student',
@@ -53,6 +81,10 @@ app.use(session({
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
+
+// Import user management routes
+const userManagementRoutes = require('./user_management_routes');
+app.use('/api/users', userManagementRoutes);
 
 // Static files with CORS headers
 app.use("/uploads", (req, res, next) => {
@@ -442,48 +474,148 @@ app.get('/farmers/admin/farmers', isAdmin, (req, res) => {
 });
 
 // Create new farmer account (admin only)
-app.post('/farmers/admin/create-farmer', isAdmin, (req, res) => {
-    const { full_name, email, phone, password, cooperative_name, location } = req.body;
+app.post('/farmers/admin/create-farmer', isAdminOrSubAdmin, (req, res) => {
+    console.log('=== FARMER CREATION REQUEST ===');
+    console.log('Request body:', req.body);
+    console.log('User role:', req.user.role);
+    console.log('User ID:', req.user.user_id);
+    
+    const { full_name, email, phone, password, cooperative_name, location, province, district, sector } = req.body;
     
     // Validate required fields including password
     if (!full_name || !email || !phone || !password) {
         return res.status(400).json({ message: 'Full name, email, phone, and password are required' });
     }
     
-    // Hash the provided password
-    bcrypt.hash(password, 10, (err, hashedPassword) => {
-        if (err) {
-            console.error('Password hashing error:', err);
-            return res.status(500).json({ message: 'Password hashing failed' });
+    // For sub-admins, validate that the farmer's location matches their assigned location
+    if (req.user.role === 'sub_admin') {
+        if (!province || !district || !sector) {
+            return res.status(400).json({ message: 'Province, district, and sector are required for sub-admin farmer creation' });
         }
         
-        // Start transaction
-        db.beginTransaction((err) => {
+        // Get sub_admin's assigned location
+        const locationQuery = `
+            SELECT province, district, sector 
+            FROM sub_admin_assignments 
+            WHERE sub_admin_id = ? AND is_active = TRUE
+            LIMIT 1
+        `;
+        
+        db.query(locationQuery, [req.user.user_id], (err, locationResult) => {
             if (err) {
-                return res.status(500).json({ message: 'Database error' });
+                console.error('Database error:', err);
+                return res.status(500).json({ message: 'Failed to fetch sub_admin location' });
             }
             
-            // Insert into users table
-            const userQuery = `
-                INSERT INTO users (full_name, email, phone, password, role, created_at)
-                VALUES (?, ?, ?, ?, 'farmer', NOW())
-            `;
+            if (locationResult.length === 0) {
+                console.log('No location assignment found in sub_admin_assignments for sub_admin:', req.user.user_id);
+                
+                // Fallback: Check if user has location data in users table
+                const fallbackQuery = `
+                    SELECT province, district, sector 
+                    FROM users 
+                    WHERE user_id = ?
+                `;
+                
+                db.query(fallbackQuery, [req.user.user_id], (fallbackErr, fallbackResult) => {
+                    if (fallbackErr) {
+                        console.error('Fallback query error:', fallbackErr);
+                        return res.status(500).json({ message: 'Failed to fetch sub_admin location' });
+                    }
+                    
+                    if (fallbackResult.length === 0) {
+                        console.log('No location data found in users table either for sub_admin:', req.user.user_id);
+                        return res.status(403).json({ message: 'No location assigned to sub-admin. Cannot create farmers.' });
+                    }
+                    
+                    const { province, district, sector } = fallbackResult[0];
+                    
+                    if (!province || !district || !sector) {
+                        console.log('User has incomplete location data:', { province, district, sector });
+                        return res.status(403).json({ message: 'Sub-admin has incomplete location data. Cannot create farmers.' });
+                    }
+                    
+                    // Use user's own location data
+                    console.log('Using fallback location from users table for sub_admin:', req.user.user_id);
+                    
+                    const assignedLocation = { province, district, sector };
+                    
+                    // Validate that the farmer's location matches the sub-admin's location
+                    if (province !== assignedLocation.province || 
+                        district !== assignedLocation.district || 
+                        sector !== assignedLocation.sector) {
+                        return res.status(403).json({ 
+                            message: 'Access denied. You can only create farmers within your assigned location.',
+                            assignedLocation: assignedLocation,
+                            requestedLocation: { province, district, sector }
+                        });
+                    }
+                    
+                    // Proceed with farmer creation
+                    createFarmerWithValidation();
+                });
+                return;
+            }
             
-            db.query(userQuery, [full_name, email, phone, hashedPassword], (err, userResult) => {
+            const assignedLocation = locationResult[0];
+            
+            // Validate that the farmer's location matches the sub-admin's assigned location
+            if (province !== assignedLocation.province || 
+                district !== assignedLocation.district || 
+                sector !== assignedLocation.sector) {
+                return res.status(403).json({ 
+                    message: 'Access denied. You can only create farmers within your assigned location.',
+                    assignedLocation: assignedLocation,
+                    requestedLocation: { province, district, sector }
+                });
+            }
+            
+            // Location validated, proceed with farmer creation
+            createFarmerWithValidation();
+        });
+    } else {
+        // Admin can create farmers anywhere
+        createFarmerWithValidation();
+    }
+    
+    function createFarmerWithValidation() {
+        // Hash the provided password
+        bcrypt.hash(password, 10, (err, hashedPassword) => {
+            if (err) {
+                console.error('Password hashing error:', err);
+                return res.status(500).json({ message: 'Password hashing failed' });
+            }
+            
+            // Start transaction
+            db.beginTransaction((err) => {
                 if (err) {
-                    return db.rollback(() => {
-                        console.error('Error creating user:', err);
-                        res.status(500).json({ message: 'Failed to create user account' });
-                    });
+                    return res.status(500).json({ message: 'Database error' });
                 }
                 
-                const userId = userResult.insertId;
+                // Create structured location string if provided
+                const structuredLocation = (province && district && sector) ? `${province},${district},${sector}` : location || 'Location not set';
                 
-                // Insert into farmers table
-                const farmerQuery = `
-                    INSERT INTO farmers (user_id, location, farm_type, description)
-                    VALUES (?, ?, ?, ?)
+                // Insert into users table with structured location
+                const userQuery = `
+                    INSERT INTO users (full_name, email, phone, password, role, province, district, sector, location, created_at)
+                    VALUES (?, ?, ?, ?, 'farmer', ?, ?, ?, ?, NOW())
                 `;
+                
+                db.query(userQuery, [full_name, email, phone, hashedPassword, province || null, district || null, sector || null, structuredLocation], (err, userResult) => {
+                    if (err) {
+                        return db.rollback(() => {
+                            console.error('Error creating user:', err);
+                            res.status(500).json({ message: 'Failed to create user account' });
+                        });
+                    }
+                    
+                    const userId = userResult.insertId;
+                    
+                    // Insert into farmers table
+                    const farmerQuery = `
+                        INSERT INTO farmers (user_id, location, farm_type, description)
+                        VALUES (?, ?, ?, ?)
+                    `;
                 
                 db.query(farmerQuery, [userId, location, cooperative_name, 'Cooperative Farmer'], (err, farmerResult) => {
                     if (err) {
@@ -515,6 +647,7 @@ app.post('/farmers/admin/create-farmer', isAdmin, (req, res) => {
             });
         });
     });
+    }
 });
 
 // Create new cooperative account (admin only)
@@ -858,11 +991,17 @@ app.delete('/users/:userId', isAdmin, (req, res) => {
                     { query: 'DELETE oi FROM order_items oi JOIN products p ON oi.product_id = p.product_id WHERE p.farmer_id = ?', params: [farmerId] },
                     // 3. Delete orders for this user (if buyer)
                     { query: 'DELETE FROM orders WHERE buyer_id = ?', params: [userId] },
-                    // 4. Delete products for this user (if farmer)
+                    // 4. Get product images for cleanup (if farmer)
+                    { 
+                        query: 'SELECT image FROM products WHERE farmer_id = ? AND image IS NOT NULL', 
+                        params: [farmerId],
+                        isImageCleanup: true
+                    },
+                    // 5. Delete products for this user (if farmer)
                     { query: 'DELETE FROM products WHERE farmer_id = ?', params: [farmerId] },
-                    // 5. Delete farmer profile (if farmer)
+                    // 6. Delete farmer profile (if farmer)
                     { query: 'DELETE FROM farmers WHERE user_id = ?', params: [userId] },
-                    // 6. Finally delete the user
+                    // 7. Finally delete the user
                     { query: 'DELETE FROM users WHERE user_id = ?', params: [userId] }
                 ];
                 
@@ -883,6 +1022,24 @@ app.delete('/users/:userId', isAdmin, (req, res) => {
                                     message: `Failed to delete user at step ${currentStep + 1}`,
                                     step: currentStep + 1,
                                     error: err.message 
+                                });
+                            }
+                            
+                            // Handle image cleanup step
+                            if (step.isImageCleanup && result && result.length > 0) {
+                                const fs = require('fs');
+                                const path = require('path');
+                                result.forEach(row => {
+                                    if (row.image) {
+                                        const fullPath = path.join(__dirname, row.image);
+                                        fs.unlink(fullPath, (unlinkErr) => {
+                                            if (unlinkErr) {
+                                                console.error('Error deleting image file:', unlinkErr);
+                                            } else {
+                                                console.log('Image file deleted successfully:', fullPath);
+                                            }
+                                        });
+                                    }
                                 });
                             }
                             
@@ -2811,15 +2968,21 @@ app.post('/buyer/cart/add', (req, res) => {
                     SELECT p.*, f.user_id as farmer_user_id
                     FROM products p
                     LEFT JOIN farmers f ON p.farmer_id = f.user_id
-                    WHERE p.product_id = ? AND p.quantity >= ?
+                    WHERE p.product_id = ?
                 `;
                 
                 const product = await new Promise((resolve, reject) => {
-                    db.query(checkQuery, [parseInt(product_id), parseInt(quantity)], (err, results) => {
+                    db.query(checkQuery, [parseInt(product_id)], (err, results) => {
                         if (err) reject(err);
                         else resolve(results[0]);
                     });
                 });
+
+                console.log('=== DEBUG: Cart Add Stock Check ===');
+                console.log('Product ID:', product_id);
+                console.log('Requested Quantity:', quantity);
+                console.log('Product found:', !!product);
+                console.log('Product quantity:', product?.quantity);
 
                 if (!product) {
                     await new Promise((resolve, reject) => {
@@ -2827,7 +2990,16 @@ app.post('/buyer/cart/add', (req, res) => {
                             resolve();
                         });
                     });
-                    return res.status(400).json({ message: 'Product not available or insufficient stock' });
+                    return res.status(404).json({ message: 'Product not found' });
+                }
+
+                if (product.quantity < parseInt(quantity)) {
+                    await new Promise((resolve, reject) => {
+                        db.rollback(() => {
+                            resolve();
+                        });
+                    });
+                    return res.status(400).json({ message: `Insufficient stock. Only ${product.quantity} items available, but you requested ${quantity}.` });
                 }
                 
                 // Check if item already in cart
@@ -3881,6 +4053,53 @@ app.post('/buyer/checkout', auth, auth.requireRole(['buyer']), (req, res) => {
             // Create order notifications for farmers
             for (const item of orderItems) {
                 createOrderNotification(buyerId, item.farmer_id, orderId, item.product_id, item.quantity, item.product_name);
+            }
+            
+            // Send SMS notifications for successful order
+            try {
+                // Get buyer phone number
+                const buyerQuery = 'SELECT phone, full_name FROM users WHERE user_id = ?';
+                const buyerResult = await new Promise((resolve, reject) => {
+                    db.query(buyerQuery, [buyerId], (err, results) => {
+                        if (err) reject(err);
+                        else resolve(results[0]);
+                    });
+                });
+                
+                if (buyerResult && buyerResult.phone) {
+                    // Send SMS to buyer
+                    await smsService.sendOrderConfirmation(buyerResult.phone, {
+                        order_id: orderId,
+                        delivery_date: '2-3 business days'
+                    });
+                    console.log('SMS sent to buyer:', buyerResult.phone);
+                }
+                
+                // Send SMS to farmers
+                for (const item of orderItems) {
+                    const farmerQuery = `
+                        SELECT u.phone, u.full_name 
+                        FROM users u 
+                        JOIN farmers f ON u.user_id = f.user_id 
+                        WHERE f.farmer_id = ?
+                    `;
+                    const farmerResult = await new Promise((resolve, reject) => {
+                        db.query(farmerQuery, [item.farmer_id], (err, results) => {
+                            if (err) reject(err);
+                            else resolve(results[0]);
+                        });
+                    });
+                    
+                    if (farmerResult && farmerResult.phone) {
+                        await smsService.sendSellerPaymentNotification(farmerResult.phone, {
+                            order_id: orderId
+                        }, totalAmount);
+                        console.log('SMS sent to farmer:', farmerResult.phone);
+                    }
+                }
+            } catch (smsError) {
+                console.error('SMS notification failed (order still successful):', smsError);
+                // Don't fail the order if SMS fails
             }
             
             // Log successful purchase

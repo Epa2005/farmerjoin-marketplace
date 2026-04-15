@@ -6,20 +6,22 @@ const jwt = require("jsonwebtoken");
 
 // REGISTER
 router.post("/register", async (req, res) => {
-  const { full_name, email, phone, password, role } = req.body;
+  const { full_name, email, phone, password, role, province, district, sector } = req.body;
   const hashed = await bcrypt.hash(password, 10);
 
   db.query(
-    "INSERT INTO users (full_name,email,phone,password,role) VALUES (?,?,?,?,?)",
-    [full_name, email, phone, hashed, role],
+    "INSERT INTO users (full_name,email,phone,password,role,province,district,sector,location) VALUES (?,?,?,?,?,?,?,?,?)",
+    [full_name, email, phone, hashed, role, province || null, district || null, sector || null, 
+     (province && district && sector) ? `${province},${district},${sector}` : null],
     (err, result) => {
       if (err) return res.status(500).json(err);
 
       const userId = result.insertId;
 
       if (role === "farmer") {
+        const locationString = (province && district && sector) ? `${province}, ${district}, ${sector}` : "Location not set";
         db.query("INSERT INTO farmers (user_id, farm_name, bio, location, phone) VALUES (?, ?, ?, ?, ?)", 
-          [userId, full_name + "'s Farm", "Welcome to my farm!", "Location not set", phone], 
+          [userId, full_name + "'s Farm", "Welcome to my farm!", locationString, phone], 
           (err, result) => {
             if (err) {
               console.error("Error creating farmer profile:", err);

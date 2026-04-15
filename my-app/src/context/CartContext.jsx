@@ -83,9 +83,10 @@ export const CartProvider = ({ children }) => {
   }, [state.items]);
 
   const addToCart = async (product, quantity = 1) => {
-    // Check if product has sufficient stock
-    if (product.quantity < quantity) {
-      throw new Error(`Insufficient stock. Only ${product.quantity} items available.`);
+    // Check if product has sufficient stock (handle missing/undefined quantity)
+    const availableStock = product.quantity || 0;
+    if (availableStock < quantity) {
+      throw new Error(`Insufficient stock. Only ${availableStock} items available.`);
     }
     
     try {
