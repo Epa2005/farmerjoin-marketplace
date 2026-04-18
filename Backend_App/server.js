@@ -9,9 +9,16 @@ const jwt = require("jsonwebtoken");
 const db = require("./dbConnection");
 const multer = require('multer');
 const axios = require('axios'); // Add axios for web scraping
+const helmet = require('helmet');
 
 // Import authentication middleware
 const auth = require('./middleware/auth');
+
+// Helper function to normalize text to title case (e.g., "kigali" -> "Kigali", "KIGALI" -> "Kigali")
+const toTitleCase = (str) => {
+    if (!str) return str;
+    return str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+};
 
 // Import mobile money checkout routes
 const mobileMoneyRoutes = require('./mobileMoneyCheckout');
@@ -19,20 +26,52 @@ const mobileMoneyRoutes = require('./mobileMoneyCheckout');
 // Import SMS service for notifications
 const smsService = require('./services/smsService');
 
+// Import AI Rwanda router
+const aiRouter = require('./ai-rwanda/routes/ai.routes');
+
 // Middleware to check if user is admin or sub_admin
 const isAdminOrSubAdmin = (req, res, next) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
         return res.status(401).json({ message: 'No token provided' });
     }
-    
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'student');
         if (decoded.role !== 'admin' && decoded.role !== 'sub_admin') {
             return res.status(403).json({ message: 'Access denied. Admin or Sub Admin required.' });
         }
-        req.user = decoded;
-        next();
+
+        // Check user status in database to enforce ban/suspension
+        db.query("SELECT user_id, role, status FROM users WHERE user_id = ?", [decoded.user_id], (err, result) => {
+            if (err) {
+                console.error('Database error checking user status:', err);
+                return res.status(500).json({ message: "Authentication error" });
+            }
+
+            if (result.length === 0) {
+                return res.status(401).json({ message: "User not found" });
+            }
+
+            const user = result[0];
+
+            // Check if user is banned or suspended (case-insensitive)
+            const userStatus = user.status ? user.status.toLowerCase() : 'inactive';
+            if (userStatus !== 'active') {
+                console.log(`User ${decoded.user_id} access denied - status: ${user.status}`);
+                let message = "Account is inactive";
+                if (userStatus === 'banned') {
+                    message = "Your account has been banned. You no longer have access to the system.";
+                } else if (userStatus === 'suspended') {
+                    message = "Your account has been suspended. Contact support for assistance.";
+                }
+                return res.status(403).json({ message: message, status: user.status });
+            }
+
+            req.user = decoded;
+            req.user.status = user.status;
+            next();
+        });
     } catch (error) {
         return res.status(401).json({ message: 'Invalid token' });
     }
@@ -69,6 +108,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Mount mobile money checkout routes
 app.use('/api', mobileMoneyRoutes);
+
+// Mount AI Rwanda router
+app.use('/api/ai', aiRouter);
 
 // Secure session configuration
 app.use(session({
@@ -192,19 +234,47 @@ const isAdmin = (req, res, next) => {
     if (!token) {
         return res.status(401).json({ message: 'No token provided' });
     }
-    
+
     try {
         // Verify JWT token
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
-        
+
         // Check if user is admin
         if (decoded.role !== 'admin') {
             return res.status(403).json({ message: 'Admin access required' });
         }
-        
-        // Add user info to request
-        req.user = decoded;
-        next();
+
+        // Check user status in database to enforce ban/suspension
+        db.query("SELECT user_id, role, status FROM users WHERE user_id = ?", [decoded.user_id], (err, result) => {
+            if (err) {
+                console.error('Database error checking user status:', err);
+                return res.status(500).json({ message: "Authentication error" });
+            }
+
+            if (result.length === 0) {
+                return res.status(401).json({ message: "User not found" });
+            }
+
+            const user = result[0];
+
+            // Check if user is banned or suspended (case-insensitive)
+            const userStatus = user.status ? user.status.toLowerCase() : 'inactive';
+            if (userStatus !== 'active') {
+                console.log(`User ${decoded.user_id} access denied - status: ${user.status}`);
+                let message = "Account is inactive";
+                if (userStatus === 'banned') {
+                    message = "Your account has been banned. You no longer have access to the system.";
+                } else if (userStatus === 'suspended') {
+                    message = "Your account has been suspended. Contact support for assistance.";
+                }
+                return res.status(403).json({ message: message, status: user.status });
+            }
+
+            // Add user info to request
+            req.user = decoded;
+            req.user.status = user.status;
+            next();
+        });
     } catch (error) {
         return res.status(401).json({ message: 'Invalid token' });
     }
@@ -481,7 +551,16 @@ app.post('/farmers/admin/create-farmer', isAdminOrSubAdmin, (req, res) => {
     console.log('User ID:', req.user.user_id);
     
     const { full_name, email, phone, password, cooperative_name, location, province, district, sector } = req.body;
-    
+
+    console.log('Original location input:', { province, district, sector });
+
+    // Normalize location fields to title case for consistency
+    const normalizedProvince = toTitleCase(province);
+    const normalizedDistrict = toTitleCase(district);
+    const normalizedSector = toTitleCase(sector);
+
+    console.log('Normalized location values:', { normalizedProvince, normalizedDistrict, normalizedSector });
+
     // Validate required fields including password
     if (!full_name || !email || !phone || !password) {
         return res.status(400).json({ message: 'Full name, email, phone, and password are required' });
@@ -489,7 +568,7 @@ app.post('/farmers/admin/create-farmer', isAdminOrSubAdmin, (req, res) => {
     
     // For sub-admins, validate that the farmer's location matches their assigned location
     if (req.user.role === 'sub_admin') {
-        if (!province || !district || !sector) {
+        if (!normalizedProvince || !normalizedDistrict || !normalizedSector) {
             return res.status(400).json({ message: 'Province, district, and sector are required for sub-admin farmer creation' });
         }
         
@@ -528,26 +607,33 @@ app.post('/farmers/admin/create-farmer', isAdminOrSubAdmin, (req, res) => {
                         return res.status(403).json({ message: 'No location assigned to sub-admin. Cannot create farmers.' });
                     }
                     
-                    const { province, district, sector } = fallbackResult[0];
-                    
-                    if (!province || !district || !sector) {
-                        console.log('User has incomplete location data:', { province, district, sector });
+                    const { province: assignedProvince, district: assignedDistrict, sector: assignedSector } = fallbackResult[0];
+
+                    if (!assignedProvince || !assignedDistrict || !assignedSector) {
+                        console.log('User has incomplete location data:', { province: assignedProvince, district: assignedDistrict, sector: assignedSector });
                         return res.status(403).json({ message: 'Sub-admin has incomplete location data. Cannot create farmers.' });
                     }
-                    
+
                     // Use user's own location data
                     console.log('Using fallback location from users table for sub_admin:', req.user.user_id);
-                    
-                    const assignedLocation = { province, district, sector };
-                    
-                    // Validate that the farmer's location matches the sub-admin's location
-                    if (province !== assignedLocation.province || 
-                        district !== assignedLocation.district || 
-                        sector !== assignedLocation.sector) {
-                        return res.status(403).json({ 
+
+                    const assignedLocation = { province: assignedProvince, district: assignedDistrict, sector: assignedSector };
+
+                    console.log('FALLBACK - Assigned location:', assignedLocation);
+                    console.log('FALLBACK - Comparison:', {
+                        provinceMatch: normalizedProvince.toLowerCase() === assignedLocation.province.toLowerCase(),
+                        districtMatch: normalizedDistrict.toLowerCase() === assignedLocation.district.toLowerCase(),
+                        sectorMatch: normalizedSector.toLowerCase() === assignedLocation.sector.toLowerCase()
+                    });
+
+                    // Validate that the farmer's location matches the sub-admin's location (case-insensitive)
+                    if (normalizedProvince.toLowerCase() !== assignedLocation.province.toLowerCase() ||
+                        normalizedDistrict.toLowerCase() !== assignedLocation.district.toLowerCase() ||
+                        normalizedSector.toLowerCase() !== assignedLocation.sector.toLowerCase()) {
+                        return res.status(403).json({
                             message: 'Access denied. You can only create farmers within your assigned location.',
                             assignedLocation: assignedLocation,
-                            requestedLocation: { province, district, sector }
+                            requestedLocation: { province: normalizedProvince, district: normalizedDistrict, sector: normalizedSector }
                         });
                     }
                     
@@ -557,16 +643,25 @@ app.post('/farmers/admin/create-farmer', isAdminOrSubAdmin, (req, res) => {
                 return;
             }
             
-            const assignedLocation = locationResult[0];
-            
-            // Validate that the farmer's location matches the sub-admin's assigned location
-            if (province !== assignedLocation.province || 
-                district !== assignedLocation.district || 
-                sector !== assignedLocation.sector) {
-                return res.status(403).json({ 
+            const { province: assignedProvince, district: assignedDistrict, sector: assignedSector } = locationResult[0];
+
+            const assignedLocation = { province: assignedProvince, district: assignedDistrict, sector: assignedSector };
+
+            console.log('Assigned location:', assignedLocation);
+            console.log('Comparison:', {
+                provinceMatch: normalizedProvince.toLowerCase() === assignedLocation.province.toLowerCase(),
+                districtMatch: normalizedDistrict.toLowerCase() === assignedLocation.district.toLowerCase(),
+                sectorMatch: normalizedSector.toLowerCase() === assignedLocation.sector.toLowerCase()
+            });
+
+            // Validate that the farmer's location matches the sub-admin's assigned location (case-insensitive)
+            if (normalizedProvince.toLowerCase() !== assignedLocation.province.toLowerCase() ||
+                normalizedDistrict.toLowerCase() !== assignedLocation.district.toLowerCase() ||
+                normalizedSector.toLowerCase() !== assignedLocation.sector.toLowerCase()) {
+                return res.status(403).json({
                     message: 'Access denied. You can only create farmers within your assigned location.',
                     assignedLocation: assignedLocation,
-                    requestedLocation: { province, district, sector }
+                    requestedLocation: { province: normalizedProvince, district: normalizedDistrict, sector: normalizedSector }
                 });
             }
             
@@ -593,15 +688,15 @@ app.post('/farmers/admin/create-farmer', isAdminOrSubAdmin, (req, res) => {
                 }
                 
                 // Create structured location string if provided
-                const structuredLocation = (province && district && sector) ? `${province},${district},${sector}` : location || 'Location not set';
-                
+                const structuredLocation = (normalizedProvince && normalizedDistrict && normalizedSector) ? `${normalizedProvince},${normalizedDistrict},${normalizedSector}` : location || 'Location not set';
+
                 // Insert into users table with structured location
                 const userQuery = `
                     INSERT INTO users (full_name, email, phone, password, role, province, district, sector, location, created_at)
                     VALUES (?, ?, ?, ?, 'farmer', ?, ?, ?, ?, NOW())
                 `;
-                
-                db.query(userQuery, [full_name, email, phone, hashedPassword, province || null, district || null, sector || null, structuredLocation], (err, userResult) => {
+
+                db.query(userQuery, [full_name, email, phone, hashedPassword, normalizedProvince || null, normalizedDistrict || null, normalizedSector || null, structuredLocation], (err, userResult) => {
                     if (err) {
                         return db.rollback(() => {
                             console.error('Error creating user:', err);
@@ -610,14 +705,14 @@ app.post('/farmers/admin/create-farmer', isAdminOrSubAdmin, (req, res) => {
                     }
                     
                     const userId = userResult.insertId;
-                    
-                    // Insert into farmers table
+
+                    // Insert into farmers table with normalized location
                     const farmerQuery = `
-                        INSERT INTO farmers (user_id, location, farm_type, description)
-                        VALUES (?, ?, ?, ?)
+                        INSERT INTO farmers (user_id, location, farm_type, description, province, district, sector)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
                     `;
-                
-                db.query(farmerQuery, [userId, location, cooperative_name, 'Cooperative Farmer'], (err, farmerResult) => {
+
+                db.query(farmerQuery, [userId, structuredLocation, cooperative_name, 'Cooperative Farmer', normalizedProvince, normalizedDistrict, normalizedSector], (err, farmerResult) => {
                     if (err) {
                         return db.rollback(() => {
                             console.error('Error creating farmer:', err);
@@ -811,14 +906,49 @@ app.post('/create_account', (req, res) => {
     });
 });
 
-// Get all users
+// Get all users (for admin user management)
 app.get('/users', (req, res) => {
     db.query("SELECT * FROM users", (err, results) => {
         if (err) {
             console.error('Database error:', err);
             return res.status(500).json({ message: 'Failed to fetch users', error: err.message });
         }
-        return res.json(results);
+
+        // Calculate statistics
+        const totalUsers = results.length;
+        const totalFarmers = results.filter(u => u.role === 'farmer').length;
+        const totalBuyers = results.filter(u => u.role === 'buyer').length;
+        const totalSubAdmins = results.filter(u => u.role === 'sub_admin').length;
+        const totalAdmins = results.filter(u => u.role === 'admin').length;
+
+        // Get total products count
+        db.query("SELECT COUNT(*) as count FROM products", (err, productResult) => {
+            if (err) {
+                console.error('Database error fetching products:', err);
+                return res.status(500).json({ message: 'Failed to fetch products count', error: err.message });
+            }
+
+            // Get total orders count
+            db.query("SELECT COUNT(*) as count FROM orders", (err, orderResult) => {
+                if (err) {
+                    console.error('Database error fetching orders:', err);
+                    return res.status(500).json({ message: 'Failed to fetch orders count', error: err.message });
+                }
+
+                const stats = {
+                    totalUsers,
+                    totalFarmers,
+                    totalBuyers,
+                    totalSubAdmins,
+                    totalAdmins,
+                    totalProducts: productResult[0].count,
+                    totalOrders: orderResult[0].count,
+                    users: results // Include users array for user management
+                };
+
+                return res.json(stats);
+            });
+        });
     });
 });
 
@@ -1104,6 +1234,7 @@ app.put('/users/:userId/activate', isAdmin, (req, res) => {
 // Get all products (public endpoint) with optional farmer filtering
 app.get('/products', (req, res) => {
     const { farmer_id } = req.query;
+    const token = req.headers.authorization?.replace('Bearer ', '');
     console.log('PRODUCTS ENDPOINT - farmer_id from query:', farmer_id);
     
     let query = `
@@ -1120,21 +1251,39 @@ app.get('/products', (req, res) => {
     `;
     let params = [];
     
+    // If user is authenticated farmer, automatically filter by their farmer_id
+    if (token && !farmer_id) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+            if (decoded.role === 'farmer') {
+                const getFarmerQuery = 'SELECT farmer_id FROM farmers WHERE user_id = ?';
+                db.query(getFarmerQuery, [decoded.user_id], (err, farmerResult) => {
+                    if (!err && farmerResult.length > 0) {
+                        query += ' WHERE p.farmer_id = ?';
+                        params.push(farmerResult[0].farmer_id);
+                        console.log('PRODUCTS - Auto-filtering for authenticated farmer:', farmerResult[0].farmer_id);
+                        executeProductsQuery(query, params, res);
+                        return;
+                    }
+                });
+            }
+        } catch (err) {
+            // Token invalid, continue with public view
+            console.log('PRODUCTS - Invalid token, showing public view');
+        }
+    }
+    
     // If farmer_id is provided, filter by that farmer
     if (farmer_id) {
         query += ' WHERE p.farmer_id = ?';
         params.push(parseInt(farmer_id));
         console.log('PRODUCTS - Added WHERE clause for farmer_id:', farmer_id);
-        
-        // Special debugging for farmer_id 110
-        if (farmer_id == 110) {
-            console.log('*** DEBUGGING PRODUCTS FOR FARMER 110 ***');
-            console.log('- Filtering products for farmer_id 110');
-            console.log('- Query executed:', query);
-            console.log('- Parameters used:', [farmer_id]);
-        }
     }
     
+    executeProductsQuery(query, params, res);
+});
+
+function executeProductsQuery(query, params, res) {
     query += ' ORDER BY p.created_at DESC';
     console.log('PRODUCTS - Final query:', query);
     console.log('PRODUCTS - Final params:', params);
@@ -1153,10 +1302,10 @@ app.get('/products', (req, res) => {
             image: product.image ? `uploads/products/${product.image}` : null
         }));
         
-        console.log(`Products query results (farmer_id=${farmer_id}):`, productsWithImagePaths);
+        console.log(`Products query results:`, productsWithImagePaths.length, 'products');
         res.json(productsWithImagePaths);
     });
-});
+}
 
 // Get reviews for a farmer
 app.get('/reviews', (req, res) => {
@@ -1172,7 +1321,7 @@ app.get('/reviews', (req, res) => {
             u.full_name as reviewer_name,
             u.email as reviewer_email
         FROM reviews r
-        LEFT JOIN users u ON r.user_id = u.user_id
+        LEFT JOIN users u ON r.buyer_id = u.user_id
         WHERE r.farmer_id = ?
         ORDER BY r.created_at DESC
     `;
@@ -1182,8 +1331,196 @@ app.get('/reviews', (req, res) => {
             console.error('Database error:', err);
             return res.status(500).json({ message: 'Failed to fetch reviews' });
         }
+        
         res.json(results);
     });
+});
+
+// Get admin settings
+app.get('/admin/settings', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        // Create settings table if it doesn't exist
+        const createTableQuery = `
+            CREATE TABLE IF NOT EXISTS settings (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                siteName VARCHAR(255),
+                siteDescription TEXT,
+                contactEmail VARCHAR(255),
+                contactPhone VARCHAR(50),
+                maintenanceMode BOOLEAN DEFAULT false,
+                allowRegistrations BOOLEAN DEFAULT true,
+                emailNotifications BOOLEAN DEFAULT true,
+                maxFileSize INT DEFAULT 5,
+                allowedFileTypes VARCHAR(255),
+                systemTimezone VARCHAR(100),
+                defaultLanguage VARCHAR(10) DEFAULT 'en',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `;
+
+        db.query(createTableQuery, (err) => {
+            if (err) {
+                console.error('Error creating settings table:', err);
+                // Return default settings even if table creation fails
+                return res.json({
+                    siteName: "FarmerJoin",
+                    siteDescription: "Agricultural Management System",
+                    contactEmail: "admin@farmerjoin.com",
+                    contactPhone: "+250 788 123 456",
+                    maintenanceMode: false,
+                    allowRegistrations: true,
+                    emailNotifications: true,
+                    maxFileSize: 5,
+                    allowedFileTypes: "jpg,jpeg,png,gif,webp",
+                    systemTimezone: "Africa/Kigali",
+                    defaultLanguage: "en"
+                });
+            }
+
+            // Query settings from database or return defaults
+            const query = 'SELECT * FROM settings WHERE id = 1';
+            db.query(query, (err, results) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    // Return default settings if table doesn't exist
+                    return res.json({
+                        siteName: "FarmerJoin",
+                        siteDescription: "Agricultural Management System",
+                        contactEmail: "admin@farmerjoin.com",
+                        contactPhone: "+250 788 123 456",
+                        maintenanceMode: false,
+                        allowRegistrations: true,
+                        emailNotifications: true,
+                        maxFileSize: 5,
+                        allowedFileTypes: "jpg,jpeg,png,gif,webp",
+                        systemTimezone: "Africa/Kigali",
+                        defaultLanguage: "en"
+                    });
+                }
+
+                if (results.length === 0) {
+                    // Return default settings if no settings exist
+                    return res.json({
+                        siteName: "FarmerJoin",
+                        siteDescription: "Agricultural Management System",
+                        contactEmail: "admin@farmerjoin.com",
+                        contactPhone: "+250 788 123 456",
+                        maintenanceMode: false,
+                        allowRegistrations: true,
+                        emailNotifications: true,
+                        maxFileSize: 5,
+                        allowedFileTypes: "jpg,jpeg,png,gif,webp",
+                        systemTimezone: "Africa/Kigali",
+                        defaultLanguage: "en"
+                    });
+                }
+
+                res.json(results[0]);
+            });
+        });
+    } catch (err) {
+        console.error('Error verifying token:', err);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+// Update admin settings
+app.put('/admin/settings', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        const settings = req.body;
+
+        // Create settings table if it doesn't exist
+        const createTableQuery = `
+            CREATE TABLE IF NOT EXISTS settings (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                siteName VARCHAR(255),
+                siteDescription TEXT,
+                contactEmail VARCHAR(255),
+                contactPhone VARCHAR(50),
+                maintenanceMode BOOLEAN DEFAULT false,
+                allowRegistrations BOOLEAN DEFAULT true,
+                emailNotifications BOOLEAN DEFAULT true,
+                maxFileSize INT DEFAULT 5,
+                allowedFileTypes VARCHAR(255),
+                systemTimezone VARCHAR(100),
+                defaultLanguage VARCHAR(10) DEFAULT 'en',
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `;
+
+        db.query(createTableQuery, (err) => {
+            if (err) {
+                console.error('Error creating settings table:', err);
+                return res.status(500).json({ message: 'Failed to create settings table' });
+            }
+
+            // Upsert settings
+            const upsertQuery = `
+                INSERT INTO settings (id, siteName, siteDescription, contactEmail, contactPhone, maintenanceMode, allowRegistrations, emailNotifications, maxFileSize, allowedFileTypes, systemTimezone, defaultLanguage)
+                VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                siteName = VALUES(siteName),
+                siteDescription = VALUES(siteDescription),
+                contactEmail = VALUES(contactEmail),
+                contactPhone = VALUES(contactPhone),
+                maintenanceMode = VALUES(maintenanceMode),
+                allowRegistrations = VALUES(allowRegistrations),
+                emailNotifications = VALUES(emailNotifications),
+                maxFileSize = VALUES(maxFileSize),
+                allowedFileTypes = VALUES(allowedFileTypes),
+                systemTimezone = VALUES(systemTimezone),
+                defaultLanguage = VALUES(defaultLanguage)
+            `;
+
+            const params = [
+                settings.siteName,
+                settings.siteDescription,
+                settings.contactEmail,
+                settings.contactPhone,
+                settings.maintenanceMode,
+                settings.allowRegistrations,
+                settings.emailNotifications,
+                settings.maxFileSize,
+                settings.allowedFileTypes,
+                settings.systemTimezone,
+                settings.defaultLanguage
+            ];
+
+            db.query(upsertQuery, params, (err, results) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ message: 'Failed to save settings' });
+                }
+
+                res.json({ message: 'Settings saved successfully' });
+            });
+        });
+    } catch (err) {
+        console.error('Error verifying token:', err);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
 });
 
 // Update product stock when added to cart
@@ -2695,22 +3032,17 @@ app.put('/buyers/location', (req, res) => {
             return res.status(403).json({ message: 'Buyer access required' });
         }
 
-        const { location } = req.body;
+        const { location, district, sector } = req.body;
         const buyerId = decoded.user_id;
 
-        if (!location) {
-            return res.status(400).json({ message: 'Location is required' });
-        }
-
-        // Update buyer's location in the buyers table
+        // Update buyer's location, district, and sector in the users table
         const query = `
-            UPDATE buyers b
-            JOIN users u ON b.user_id = u.user_id
-            SET b.location = ?
-            WHERE u.user_id = ?
+            UPDATE users
+            SET location = ?, district = ?, sector = ?
+            WHERE user_id = ? AND role = 'buyer'
         `;
 
-        db.query(query, [location, buyerId], (err, result) => {
+        db.query(query, [location, district, sector, buyerId], (err, result) => {
             if (err) {
                 console.error('Database error:', err);
                 return res.status(500).json({ message: 'Failed to update location' });
@@ -2722,7 +3054,9 @@ app.put('/buyers/location', (req, res) => {
 
             res.json({ 
                 message: 'Location updated successfully',
-                location: location
+                location: location,
+                district: district,
+                sector: sector
             });
         });
     } catch (error) {
@@ -2747,9 +3081,10 @@ app.get('/buyers/location', (req, res) => {
 
         const buyerId = decoded.user_id;
         
-        // Get buyer's location from the users table (since buyers table might not exist)
+        // Get buyer's location, district, and sector from the users table
         const query = `
-            SELECT u.full_name, u.email, u.phone, u.created_at as member_since
+            SELECT u.full_name, u.email, u.phone, u.created_at as member_since,
+                   u.location, u.district, u.sector
             FROM users u
             WHERE u.user_id = ? AND u.role = 'buyer'
         `;
@@ -2766,13 +3101,15 @@ app.get('/buyers/location', (req, res) => {
             
             const buyer = results[0];
             
-            // Return buyer data (location can be added later if needed)
+            // Return buyer data with location, district, and sector
             res.json({
                 full_name: buyer.full_name,
                 email: buyer.email,
                 phone: buyer.phone,
                 member_since: buyer.member_since,
-                location: 'Not specified' // Default value since location isn't in users table
+                location: buyer.location || 'Not specified',
+                district: buyer.district || '',
+                sector: buyer.sector || ''
             });
         });
     } catch (error) {
@@ -2992,15 +3329,6 @@ app.post('/buyer/cart/add', (req, res) => {
                     });
                     return res.status(404).json({ message: 'Product not found' });
                 }
-
-                if (product.quantity < parseInt(quantity)) {
-                    await new Promise((resolve, reject) => {
-                        db.rollback(() => {
-                            resolve();
-                        });
-                    });
-                    return res.status(400).json({ message: `Insufficient stock. Only ${product.quantity} items available, but you requested ${quantity}.` });
-                }
                 
                 // Check if item already in cart
                 const cartQuery = 'SELECT * FROM cart WHERE buyer_id = ? AND product_id = ?';
@@ -3015,28 +3343,9 @@ app.post('/buyer/cart/add', (req, res) => {
                     // Update existing cart item
                     const newQuantity = cartResults[0].quantity + parseInt(quantity);
                     
-                    if (newQuantity > product.quantity) {
-                        await new Promise((resolve, reject) => {
-                            db.rollback(() => {
-                                resolve();
-                            });
-                        });
-                        return res.status(400).json({ message: 'Insufficient stock for requested quantity' });
-                    }
-                    
                     const updateQuery = 'UPDATE cart SET quantity = ?, updated_at = NOW() WHERE cart_id = ?';
                     await new Promise((resolve, reject) => {
                         db.query(updateQuery, [newQuantity, cartResults[0].cart_id], (err) => {
-                            if (err) reject(err);
-                            else resolve();
-                        });
-                    });
-                    
-                    // Reduce product stock
-                    const newStock = product.quantity - parseInt(quantity);
-                    const stockUpdateQuery = 'UPDATE products SET quantity = ? WHERE product_id = ?';
-                    await new Promise((resolve, reject) => {
-                        db.query(stockUpdateQuery, [newStock, parseInt(product_id)], (err) => {
                             if (err) reject(err);
                             else resolve();
                         });
@@ -3054,9 +3363,7 @@ app.post('/buyer/cart/add', (req, res) => {
                     
                     res.json({ 
                         message: 'Cart updated successfully', 
-                        quantity: newQuantity,
-                        stockReduced: true,
-                        newStock: newStock
+                        quantity: newQuantity
                     });
                 } else {
                     // Add new item to cart
@@ -3067,16 +3374,6 @@ app.post('/buyer/cart/add', (req, res) => {
                     
                     await new Promise((resolve, reject) => {
                         db.query(insertQuery, [buyerId, parseInt(product_id), parseInt(quantity), product.price], (err) => {
-                            if (err) reject(err);
-                            else resolve();
-                        });
-                    });
-                    
-                    // Reduce product stock
-                    const newStock = product.quantity - parseInt(quantity);
-                    const stockUpdateQuery = 'UPDATE products SET quantity = ? WHERE product_id = ?';
-                    await new Promise((resolve, reject) => {
-                        db.query(stockUpdateQuery, [newStock, parseInt(product_id)], (err) => {
                             if (err) reject(err);
                             else resolve();
                         });
@@ -3472,8 +3769,8 @@ app.get('/admin/farmers', (req, res) => {
     }
 });
 
-// Farmer notifications endpoint - view orders for their products
-app.get('/farmer/notifications', (req, res) => {
+// Farmer notifications endpoint - view orders for their products (renamed to avoid conflict with actual notifications)
+app.get('/farmer/order-notifications', (req, res) => {
     const token = req.headers.authorization?.replace('Bearer ', '');
     if (!token) {
         return res.status(401).json({ message: 'No token provided' });
@@ -3489,7 +3786,7 @@ app.get('/farmer/notifications', (req, res) => {
         const farmerId = decoded.user_id;
 
         const query = `
-            SELECT 
+            SELECT
                 o.order_id,
                 o.buyer_id,
                 o.total_amount,
@@ -3615,13 +3912,32 @@ app.get('/admin/images/slider', (req, res) => {
 
 // Get available farmers for buyers (secured)
 app.get('/buyer/farmers', auth.requireRole(['buyer']), (req, res) => {
+    // Ensure district and sector columns exist in users table
+    const alterTableQuery = `
+        ALTER TABLE users 
+        ADD COLUMN IF NOT EXISTS district VARCHAR(100) DEFAULT '',
+        ADD COLUMN IF NOT EXISTS sector VARCHAR(100) DEFAULT ''
+    `;
+    
+    db.query(alterTableQuery, (err) => {
+        if (err) {
+            console.error('Error adding district/sector columns:', err);
+        }
+    });
+    
     const query = `
-        SELECT 
+        SELECT
             u.user_id,
             u.full_name,
             u.email,
             u.phone,
+            u.district,
+            u.sector,
             f.location,
+            f.province,
+            f.district as farmer_district,
+            f.sector as farmer_sector,
+            f.cell,
             f.farm_name,
             f.farmer_id,
             COUNT(p.product_id) as product_count
@@ -3629,7 +3945,7 @@ app.get('/buyer/farmers', auth.requireRole(['buyer']), (req, res) => {
         JOIN farmers f ON u.user_id = f.user_id
         LEFT JOIN products p ON f.farmer_id = p.farmer_id AND p.quantity > 0
         WHERE u.role = 'farmer' AND u.status = 'active'
-        GROUP BY u.user_id, u.full_name, u.email, u.phone, f.location, f.farm_name, f.farmer_id
+        GROUP BY u.user_id, u.full_name, u.email, u.phone, u.district, u.sector, f.location, f.province, f.district, f.sector, f.cell, f.farm_name, f.farmer_id
         ORDER BY product_count DESC, f.location ASC
     `;
     
@@ -3769,16 +4085,6 @@ app.delete('/buyer/cart/:cartId', auth.requireRole(['buyer']), (req, res) => {
                 });
             });
             
-            // Restore product stock
-            const newStock = cartItem.current_stock + cartItem.quantity;
-            const stockUpdateQuery = 'UPDATE products SET quantity = ? WHERE product_id = ?';
-            await new Promise((resolve, reject) => {
-                db.query(stockUpdateQuery, [newStock, cartItem.product_id], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
-            
             // Commit transaction
             await new Promise((resolve, reject) => {
                 db.commit((err) => {
@@ -3787,13 +4093,8 @@ app.delete('/buyer/cart/:cartId', auth.requireRole(['buyer']), (req, res) => {
                 });
             });
             
-            console.log(`Stock restored: +${cartItem.quantity} for product ${cartItem.product_id}, new stock: ${newStock}`);
-            
             res.json({ 
-                message: 'Item removed from cart successfully',
-                stockRestored: true,
-                restoredQuantity: cartItem.quantity,
-                newStock: newStock
+                message: 'Item removed from cart successfully'
             });
             
         } catch (error) {
@@ -3856,16 +4157,6 @@ app.delete('/buyer/cart/product/:productId', auth.requireRole(['buyer']), (req, 
                 });
             });
             
-            // Restore product stock
-            const newStock = cartItem.current_stock + cartItem.quantity;
-            const stockUpdateQuery = 'UPDATE products SET quantity = ? WHERE product_id = ?';
-            await new Promise((resolve, reject) => {
-                db.query(stockUpdateQuery, [newStock, parseInt(productId)], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
-            
             // Commit transaction
             await new Promise((resolve, reject) => {
                 db.commit((err) => {
@@ -3874,13 +4165,8 @@ app.delete('/buyer/cart/product/:productId', auth.requireRole(['buyer']), (req, 
                 });
             });
             
-            console.log(`Stock restored: +${cartItem.quantity} for product ${productId}, new stock: ${newStock}`);
-            
             res.json({ 
-                message: 'Item removed from cart successfully',
-                stockRestored: true,
-                restoredQuantity: cartItem.quantity,
-                newStock: newStock
+                message: 'Item removed from cart successfully'
             });
             
         } catch (error) {
@@ -3963,8 +4249,8 @@ app.post('/buyer/checkout', auth, auth.requireRole(['buyer']), (req, res) => {
                 
                 const product = productResult[0];
                 
-                if (product.available_stock < quantity) {
-                    throw new Error(`Insufficient stock for ${product.product_name}`);
+                if (product.quantity < quantity) {
+                    throw new Error(`Insufficient stock for ${product.product_name}. Only ${product.quantity} available, but you requested ${quantity}.`);
                 }
                 
                 const itemTotal = price * quantity;
@@ -4021,12 +4307,21 @@ app.post('/buyer/checkout', auth, auth.requireRole(['buyer']), (req, res) => {
                     WHERE product_id = ? AND quantity >= ?
                 `;
                 
+                console.log(`=== STOCK REDUCTION ===`);
+                console.log(`Product ID: ${item.product_id}`);
+                console.log(`Quantity to reduce: ${item.quantity}`);
+                console.log(`Query: ${updateStockQuery}`);
+                console.log(`Params: [${item.quantity}, ${item.product_id}, ${item.quantity}]`);
+                
                 const stockResult = await new Promise((resolve, reject) => {
                     db.query(updateStockQuery, [item.quantity, item.product_id, item.quantity], (err, results) => {
                         if (err) reject(err);
                         else resolve(results);
                     });
                 });
+                
+                console.log(`Stock reduction result:`, stockResult);
+                console.log(`Affected rows:`, stockResult.affectedRows);
                 
                 if (stockResult.affectedRows === 0) {
                     throw new Error(`Stock update failed for ${item.product_name}`);
@@ -4713,8 +5008,23 @@ app.get('/farmer/notifications', (req, res) => {
                         console.error('Database error:', err);
                         return res.status(500).json({ message: 'Failed to fetch notifications' });
                     }
-                    
-                    res.json(results);
+
+                    // Format notifications to include id field
+                    const formattedNotifications = results.map(notification => ({
+                        id: notification.notification_id,
+                        notification_id: notification.notification_id,
+                        type: notification.type,
+                        title: notification.title,
+                        message: notification.message,
+                        buyer_name: notification.buyer_name,
+                        product_name: notification.product_name,
+                        order_id: notification.order_id,
+                        read: notification.is_read,
+                        time: formatTimeAgo(notification.created_at),
+                        created_at: notification.created_at
+                    }));
+
+                    res.json(formattedNotifications);
                 });
             });
         });
@@ -4728,24 +5038,79 @@ app.get('/farmer/notifications', (req, res) => {
 app.put('/farmer/notifications/:notificationId/read', auth.requireRole(['farmer']), (req, res) => {
     const farmerId = req.user.user_id;
     const { notificationId } = req.params;
-    
+
     if (!parseInt(notificationId)) {
         return res.status(400).json({ message: 'Invalid notification ID' });
     }
-    
+
     const query = 'UPDATE notifications SET is_read = TRUE, read_at = NOW() WHERE notification_id = ? AND farmer_id = ?';
     db.query(query, [parseInt(notificationId), farmerId], (err, result) => {
         if (err) {
             console.error('Database error:', err);
             return res.status(500).json({ message: 'Failed to mark notification as read' });
         }
-        
+
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Notification not found' });
         }
-        
+
         res.json({ message: 'Notification marked as read' });
     });
+});
+
+// Delete notification (secured)
+app.delete('/farmer/notifications/:notificationId', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'farmer') {
+            return res.status(403).json({ message: 'Farmer access required' });
+        }
+
+        // Get the farmer_id from farmers table using user_id
+        const getFarmerQuery = 'SELECT farmer_id FROM farmers WHERE user_id = ?';
+
+        db.query(getFarmerQuery, [decoded.user_id], (err, farmerResult) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ message: 'Database error' });
+            }
+
+            if (farmerResult.length === 0) {
+                return res.status(404).json({ message: 'Farmer profile not found' });
+            }
+
+            const farmerId = farmerResult[0].farmer_id;
+            const { notificationId } = req.params;
+
+            if (!parseInt(notificationId)) {
+                return res.status(400).json({ message: 'Invalid notification ID' });
+            }
+
+            const query = 'DELETE FROM notifications WHERE notification_id = ? AND farmer_id = ?';
+            db.query(query, [parseInt(notificationId), farmerId], (err, result) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ message: 'Failed to delete notification' });
+                }
+
+                if (result.affectedRows === 0) {
+                    return res.status(404).json({ message: 'Notification not found' });
+                }
+
+                console.log(`Notification ${notificationId} deleted by farmer ${farmerId}`);
+                res.json({ message: 'Notification deleted successfully' });
+            });
+        });
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
 });
 
 // Get farmer's orders (secured)
@@ -5062,12 +5427,357 @@ function formatTimeAgo(date) {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
-    
+
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins} min ago`;
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
     return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
 }
+
+// Edit farmer (sub-admin only with location validation)
+app.put('/api/farmers/admin/:farmerId', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'sub_admin') {
+            return res.status(403).json({ message: 'Sub-admin access required' });
+        }
+
+        const { farmerId } = req.params;
+        const { full_name, email, phone, province, district, sector, cooperative_name } = req.body;
+
+        // Get sub-admin's assigned location
+        const locationQuery = `
+            SELECT province, district, sector
+            FROM users
+            WHERE user_id = ?
+        `;
+
+        db.query(locationQuery, [decoded.user_id], (err, locationResult) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ message: 'Database error' });
+            }
+
+            if (locationResult.length === 0) {
+                return res.status(404).json({ message: 'Sub-admin location not found' });
+            }
+
+            const { province: assignedProvince, district: assignedDistrict, sector: assignedSector } = locationResult[0];
+
+            // Get farmer's current location to validate (from users table)
+            const farmerQuery = `
+                SELECT f.user_id, u.province, u.district, u.sector
+                FROM farmers f
+                INNER JOIN users u ON f.user_id = u.user_id
+                WHERE f.farmer_id = ? OR f.user_id = ?
+            `;
+
+            db.query(farmerQuery, [parseInt(farmerId), parseInt(farmerId)], (err, farmerResult) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ message: 'Database error' });
+                }
+
+                if (farmerResult.length === 0) {
+                    return res.status(404).json({ message: 'Farmer not found' });
+                }
+
+                const farmer = farmerResult[0];
+                console.log('EDIT - Farmer data:', farmer);
+
+                // Validate that farmer is in sub-admin's assigned location (case-insensitive)
+                // If farmer has no location data, allow operation (legacy farmers)
+                if (farmer.province && farmer.district && farmer.sector) {
+                    if (farmer.province.toLowerCase() !== assignedProvince.toLowerCase() ||
+                        farmer.district.toLowerCase() !== assignedDistrict.toLowerCase() ||
+                        farmer.sector.toLowerCase() !== assignedSector.toLowerCase()) {
+                        return res.status(403).json({
+                            message: 'Access denied. You can only edit farmers within your assigned location.'
+                        });
+                    }
+                } else {
+                    console.log('EDIT - Farmer has incomplete location data, allowing operation (legacy farmer)');
+                }
+
+                // If location is being updated, validate it matches sub-admin's location
+                if (province && district && sector) {
+                    if (province.toLowerCase() !== assignedProvince.toLowerCase() ||
+                        district.toLowerCase() !== assignedDistrict.toLowerCase() ||
+                        sector.toLowerCase() !== assignedSector.toLowerCase()) {
+                        return res.status(403).json({
+                            message: 'Access denied. You can only assign farmers within your assigned location.'
+                        });
+                    }
+                }
+
+                // Update farmer and user information
+                const updateQueries = [];
+                const params = [];
+
+                if (full_name) {
+                    updateQueries.push('UPDATE users SET full_name = ? WHERE user_id = ?');
+                    params.push(full_name, farmer.user_id);
+                }
+                if (email) {
+                    updateQueries.push('UPDATE users SET email = ? WHERE user_id = ?');
+                    params.push(email, farmer.user_id);
+                }
+                if (phone) {
+                    updateQueries.push('UPDATE users SET phone = ? WHERE user_id = ?');
+                    params.push(phone, farmer.user_id);
+                }
+                if (province) {
+                    updateQueries.push('UPDATE farmers SET province = ? WHERE user_id = ?');
+                    params.push(province, farmer.user_id);
+                }
+                if (district) {
+                    updateQueries.push('UPDATE farmers SET district = ? WHERE user_id = ?');
+                    params.push(district, farmer.user_id);
+                }
+                if (sector) {
+                    updateQueries.push('UPDATE farmers SET sector = ? WHERE user_id = ?');
+                    params.push(sector, farmer.user_id);
+                }
+                if (cooperative_name !== undefined) {
+                    updateQueries.push('UPDATE farmers SET cooperative_name = ? WHERE user_id = ?');
+                    params.push(cooperative_name, farmer.user_id);
+                }
+
+                if (updateQueries.length === 0) {
+                    return res.status(400).json({ message: 'No fields to update' });
+                }
+
+                // Execute all updates
+                let completed = 0;
+                updateQueries.forEach((query, index) => {
+                    const queryIndex = index;
+                    const queryParams = params.slice(queryIndex * 2, queryIndex * 2 + 2);
+                    db.query(query, queryParams, (err) => {
+                        if (err) {
+                            console.error('Database error:', err);
+                            return res.status(500).json({ message: 'Failed to update farmer' });
+                        }
+                        completed++;
+                        if (completed === updateQueries.length) {
+                            res.json({ message: 'Farmer updated successfully' });
+                        }
+                    });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+// Delete farmer (sub-admin only with location validation)
+app.delete('/api/farmers/:farmerId', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'sub_admin') {
+            return res.status(403).json({ message: 'Sub-admin access required' });
+        }
+
+        const { farmerId } = req.params;
+
+        // Get sub-admin's assigned location
+        const locationQuery = `
+            SELECT province, district, sector
+            FROM users
+            WHERE user_id = ?
+        `;
+
+        db.query(locationQuery, [decoded.user_id], (err, locationResult) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ message: 'Database error' });
+            }
+
+            if (locationResult.length === 0) {
+                return res.status(404).json({ message: 'Sub-admin location not found' });
+            }
+
+            const { province: assignedProvince, district: assignedDistrict, sector: assignedSector } = locationResult[0];
+
+            // Get farmer's current location to validate (from users table)
+            const farmerQuery = `
+                SELECT f.user_id, u.province, u.district, u.sector
+                FROM farmers f
+                INNER JOIN users u ON f.user_id = u.user_id
+                WHERE f.farmer_id = ? OR f.user_id = ?
+            `;
+
+            db.query(farmerQuery, [parseInt(farmerId), parseInt(farmerId)], (err, farmerResult) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ message: 'Database error' });
+                }
+
+                if (farmerResult.length === 0) {
+                    return res.status(404).json({ message: 'Farmer not found' });
+                }
+
+                const farmer = farmerResult[0];
+                console.log('DELETE - Farmer data:', farmer);
+
+                // Validate that farmer is in sub-admin's assigned location (case-insensitive)
+                // If farmer has no location data, allow operation (legacy farmers)
+                if (farmer.province && farmer.district && farmer.sector) {
+                    if (farmer.province.toLowerCase() !== assignedProvince.toLowerCase() ||
+                        farmer.district.toLowerCase() !== assignedDistrict.toLowerCase() ||
+                        farmer.sector.toLowerCase() !== assignedSector.toLowerCase()) {
+                        return res.status(403).json({
+                            message: 'Access denied. You can only delete farmers within your assigned location.'
+                        });
+                    }
+                } else {
+                    console.log('DELETE - Farmer has incomplete location data, allowing operation (legacy farmer)');
+                }
+
+                const userId = farmer.user_id;
+
+                // Delete farmer and related data
+                const deleteSteps = [
+                    // 1. Delete order items for this farmer's products
+                    { query: 'DELETE oi FROM order_items oi JOIN products p ON oi.product_id = p.product_id WHERE p.farmer_id = ?', params: [farmerId] },
+                    // 2. Delete orders for this farmer's products
+                    { query: 'DELETE o FROM orders o JOIN order_items oi ON o.order_id = oi.order_id JOIN products p ON oi.product_id = p.product_id WHERE p.farmer_id = ?', params: [farmerId] },
+                    // 3. Get product images for cleanup
+                    {
+                        query: 'SELECT image FROM products WHERE farmer_id = ? AND image IS NOT NULL',
+                        params: [farmerId],
+                        isImageCleanup: true
+                    },
+                    // 4. Delete products for this farmer
+                    { query: 'DELETE FROM products WHERE farmer_id = ?', params: [farmerId] },
+                    // 5. Delete farmer profile
+                    { query: 'DELETE FROM farmers WHERE user_id = ?', params: [userId] },
+                    // 6. Finally delete the user
+                    { query: 'DELETE FROM users WHERE user_id = ?', params: [userId] }
+                ];
+
+                let currentStep = 0;
+
+                const executeNextStep = () => {
+                    if (currentStep < deleteSteps.length) {
+                        const step = deleteSteps[currentStep];
+                        db.query(step.query, step.params, (err, result) => {
+                            if (err) {
+                                console.error('Database error:', err);
+                                return res.status(500).json({ message: 'Failed to delete farmer' });
+                            }
+
+                            // Handle image cleanup step
+                            if (step.isImageCleanup && result && result.length > 0) {
+                                const fs = require('fs');
+                                const path = require('path');
+                                result.forEach(row => {
+                                    if (row.image) {
+                                        const imagePath = path.join(__dirname, 'uploads', 'products', row.image);
+                                        if (fs.existsSync(imagePath)) {
+                                            fs.unlinkSync(imagePath);
+                                        }
+                                    }
+                                });
+                            }
+
+                            currentStep++;
+                            executeNextStep();
+                        });
+                    } else {
+                        res.json({ message: 'Farmer deleted successfully' });
+                    }
+                };
+
+                executeNextStep();
+            });
+        });
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+// Get sub-admin's managed farmers' orders (secured)
+app.get('/sub-admin/orders', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'sub_admin') {
+            return res.status(403).json({ message: 'Sub-admin access required' });
+        }
+
+        // Get sub-admin's assigned location
+        const locationQuery = `
+            SELECT province, district, sector
+            FROM users
+            WHERE user_id = ?
+        `;
+
+        db.query(locationQuery, [decoded.user_id], (err, locationResult) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ message: 'Database error' });
+            }
+
+            if (locationResult.length === 0) {
+                return res.status(404).json({ message: 'Sub-admin location not found' });
+            }
+
+            const { province, district, sector } = locationResult[0];
+
+            // Get orders from farmers in the sub-admin's assigned location
+            const ordersQuery = `
+                SELECT
+                    o.order_id,
+                    o.buyer_id,
+                    o.status,
+                    o.created_at,
+                    u.full_name AS buyer_name,
+                    fu.full_name AS farmer_name,
+                    (SELECT SUM(oi.quantity * oi.price) FROM order_items oi WHERE oi.order_id = o.order_id) AS total_amount
+                FROM orders o
+                INNER JOIN order_items oi ON o.order_id = oi.order_id
+                INNER JOIN farmers f ON oi.farmer_id = f.farmer_id
+                INNER JOIN users u ON o.buyer_id = u.user_id
+                INNER JOIN users fu ON f.user_id = fu.user_id
+                WHERE f.province = ? AND f.district = ? AND f.sector = ?
+                GROUP BY o.order_id
+                ORDER BY o.created_at DESC
+            `;
+
+            db.query(ordersQuery, [province, district, sector], (err, results) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ message: 'Failed to fetch orders' });
+                }
+
+                res.json(results);
+            });
+        });
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+});
 
 // Update order status (secured)
 app.put('/farmer/orders/:orderId/status', auth.requireRole(['farmer']), (req, res) => {
@@ -5110,6 +5820,117 @@ app.put('/farmer/orders/:orderId/status', auth.requireRole(['farmer']), (req, re
             res.json({ message: 'Order status updated successfully' });
         });
     });
+});
+
+// Delete admin's order (secured)
+app.delete('/admin/orders/:orderId', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'admin') {
+            return res.status(403).json({ message: 'Admin access required' });
+        }
+
+        const { orderId } = req.params;
+
+        console.log(`Attempting to delete order ${orderId} by admin`);
+
+        // Delete order_items first (due to foreign key constraint)
+        const deleteOrderItemsQuery = 'DELETE FROM order_items WHERE order_id = ?';
+        db.query(deleteOrderItemsQuery, [parseInt(orderId)], (err, itemsResult) => {
+            if (err) {
+                console.error('Database error deleting order items:', err);
+                return res.status(500).json({ message: 'Failed to delete order items' });
+            }
+
+            console.log(`Deleted ${itemsResult.affectedRows} order items for order ${orderId}`);
+
+            // Then delete the order from orders table
+            const deleteOrderQuery = 'DELETE FROM orders WHERE order_id = ?';
+            db.query(deleteOrderQuery, [parseInt(orderId)], (err, orderResult) => {
+                if (err) {
+                    console.error('Database error:', err);
+                    return res.status(500).json({ message: 'Failed to delete order' });
+                }
+
+                if (orderResult.affectedRows === 0) {
+                    return res.status(404).json({ message: 'Order not found' });
+                }
+
+                console.log(`Order ${orderId} deleted by admin`);
+                res.json({ message: 'Order deleted successfully' });
+            });
+        });
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+});
+
+// Delete farmer's order (secured)
+app.delete('/farmer/orders/:orderId', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+
+        if (decoded.role !== 'farmer') {
+            return res.status(403).json({ message: 'Farmer access required' });
+        }
+
+        // Get the farmer_id from farmers table using user_id
+        const getFarmerQuery = 'SELECT farmer_id FROM farmers WHERE user_id = ?';
+
+        db.query(getFarmerQuery, [decoded.user_id], (err, farmerResult) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ message: 'Database error' });
+            }
+
+            if (farmerResult.length === 0) {
+                return res.status(404).json({ message: 'Farmer profile not found' });
+            }
+
+            const farmerId = farmerResult[0].farmer_id;
+            const { orderId } = req.params;
+
+            console.log(`Attempting to delete order ${orderId} for farmer ${farmerId}`);
+
+            // Delete order_items first (due to foreign key constraint)
+            const deleteOrderItemsQuery = 'DELETE FROM order_items WHERE order_id = ?';
+            db.query(deleteOrderItemsQuery, [parseInt(orderId)], (err, itemsResult) => {
+                if (err) {
+                    console.error('Database error deleting order items:', err);
+                    return res.status(500).json({ message: 'Failed to delete order items' });
+                }
+
+                console.log(`Deleted ${itemsResult.affectedRows} order items for order ${orderId}`);
+
+                // Then delete the order from orders table
+                const deleteOrderQuery = 'DELETE FROM orders WHERE order_id = ?';
+                db.query(deleteOrderQuery, [parseInt(orderId)], (err, orderResult) => {
+                    if (err) {
+                        console.error('Database error:', err);
+                        return res.status(500).json({ message: 'Failed to delete order' });
+                    }
+
+                    console.log(`Order ${orderId} deleted by farmer ${farmerId}`);
+                    res.json({ message: 'Order deleted successfully' });
+                });
+            });
+        });
+    } catch (error) {
+        console.error('Token verification error:', error);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
 });
 
 // ============= ORDER ROUTES =============

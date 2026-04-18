@@ -89,6 +89,30 @@ function AdminDashboard() {
     navigate("/login");
   };
 
+  const handleDeleteOrder = async (orderId) => {
+    if (!window.confirm('Are you sure you want to delete this order?')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      await API.delete(`/admin/orders/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Refresh orders list
+      const ordersResponse = await API.get("/admin/orders", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrders(ordersResponse.data.orders || []);
+      
+      alert('Order deleted successfully');
+    } catch (err) {
+      console.error('Failed to delete order:', err);
+      alert('Failed to delete order');
+    }
+  };
+
   const generatePassword = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
     let password = '';
@@ -107,11 +131,15 @@ function AdminDashboard() {
       const token = localStorage.getItem("token");
       let response;
       
-      // Create structured location data for backend
+      // Create structured location data for backend with case-insensitive formatting
       const formData = {
         ...createForm,
+        province: createForm.province ? createForm.province.trim().toLowerCase() : '',
+        district: createForm.district ? createForm.district.trim().toLowerCase() : '',
+        sector: createForm.sector ? createForm.sector.trim().toLowerCase() : '',
+        cell: createForm.cell ? createForm.cell.trim().toLowerCase() : '',
         location: createForm.province && createForm.district && createForm.sector 
-          ? `${createForm.province},${createForm.district},${createForm.sector}${createForm.cell ? ',' + createForm.cell : ''}`
+          ? `${createForm.province.trim().toLowerCase()},${createForm.district.trim().toLowerCase()},${createForm.sector.trim().toLowerCase()}${createForm.cell ? ',' + createForm.cell.trim().toLowerCase() : ''}`
           : createForm.location
       };
       
@@ -254,7 +282,7 @@ function AdminDashboard() {
             </div>
 
             {/* Modern Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               <div className="group bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-md rounded-xl p-6 border border-blue-500/30 hover:border-blue-400/50 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-2xl">
                 <div className="flex items-center justify-between mb-4">
                   <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
@@ -326,6 +354,24 @@ function AdminDashboard() {
                   <p className="text-orange-400 text-xs">{t('listedProducts')}</p>
                 </div>
               </div>
+
+              <div className="group bg-gradient-to-br from-cyan-500/20 to-cyan-600/20 backdrop-blur-md rounded-xl p-6 border border-cyan-500/30 hover:border-cyan-400/50 transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-2xl">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
+                    <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                  </div>
+                  <div className="bg-cyan-500/20 rounded-full px-2 py-1">
+                    <span className="text-cyan-300 text-xs font-medium">+18%</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-cyan-300 text-sm font-medium mb-1">Orders</p>
+                  <p className="text-4xl font-bold text-white mb-2">{orders.length}</p>
+                  <p className="text-cyan-400 text-xs">Total orders</p>
+                </div>
+              </div>
             </div>
 
             {/* Quick Actions */}
@@ -367,15 +413,15 @@ function AdminDashboard() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-pink-300">{t('newFarmersToday')}</span>
-                    <span className="text-white font-medium">3</span>
+                    <span className="text-white font-medium">{farmers.length}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-pink-300">{t('ordersPending')}</span>
-                    <span className="text-white font-medium">12</span>
+                    <span className="text-white font-medium">{orders.filter(o => o.status === 'pending').length}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-pink-300">{t('productsListed')}</span>
-                    <span className="text-white font-medium">47</span>
+                    <span className="text-white font-medium">{stats.totalProducts}</span>
                   </div>
                 </div>
               </div>
@@ -434,9 +480,11 @@ function AdminDashboard() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Product</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Farmer</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Quantity</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Price</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Total</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Payment</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/10">
@@ -464,7 +512,16 @@ function AdminDashboard() {
                           {order.quantity}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                          ${order.price}
+                          ${order.total_amount || (order.quantity * order.price).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            order.payment_status === 'completed' ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
+                            order.payment_status === 'pending' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
+                            'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                          }`}>
+                            {order.payment_status || 'pending'}
+                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -477,6 +534,14 @@ function AdminDashboard() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                           {new Date(order.order_date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          <button
+                            onClick={() => handleDeleteOrder(order.order_id)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20 px-3 py-1 rounded transition-colors"
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     ))}

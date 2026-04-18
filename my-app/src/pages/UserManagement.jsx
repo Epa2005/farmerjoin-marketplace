@@ -217,8 +217,8 @@ function UserManagement() {
     const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === '' || user.role === roleFilter;
-    const matchesStatus = statusFilter === '' || user.status === statusFilter;
-    return matchesSearch && matchesRole && matchesStatus;
+    // Don't filter by status - show all users including banned/suspended
+    return matchesSearch && matchesRole;
   });
 
   const indexOfLastUser = currentPage * usersPerPage;

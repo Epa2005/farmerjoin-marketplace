@@ -7,6 +7,7 @@ function SubAdminDashboard() {
   const { t, changeLanguage, currentLanguage } = useTranslation();
   const navigate = useNavigate();
   const [farmers, setFarmers] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [statistics, setStatistics] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,7 +28,8 @@ function SubAdminDashboard() {
     province: "",
     district: "",
     sector: "",
-    cooperative_name: ""
+    cooperative_name: "",
+    location: ""
   });
   const [currentPage, setCurrentPage] = useState(1);
   const farmersPerPage = 10;
@@ -35,7 +37,20 @@ function SubAdminDashboard() {
   useEffect(() => {
     fetchManagedFarmers();
     fetchStatistics();
+    fetchOrders();
   }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await API.get("/sub-admin/orders", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setOrders(response.data || []);
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+    }
+  };
 
   const fetchManagedFarmers = async () => {
     try {
@@ -129,10 +144,11 @@ function SubAdminDashboard() {
     try {
       const token = localStorage.getItem("token");
       // Use farmer-specific endpoint with location validation
-      await API.put(`/api/farmers/admin/${selectedFarmer.farmer_id}`, farmerData, {
+      const farmerId = selectedFarmer.farmer_id || selectedFarmer.user_id;
+      await API.put(`/api/farmers/admin/${farmerId}`, farmerData, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
+
       fetchManagedFarmers();
       setShowEditFarmerModal(false);
       setFarmerData({
@@ -140,7 +156,9 @@ function SubAdminDashboard() {
         email: "",
         phone: "",
         password: "",
-        location: "",
+        province: "",
+        district: "",
+        sector: "",
         cooperative_name: ""
       });
       alert('Farmer updated successfully');
@@ -150,15 +168,16 @@ function SubAdminDashboard() {
     }
   };
 
-  const handleDeleteFarmer = async (farmerId) => {
+  const handleDeleteFarmer = async (farmer) => {
     if (window.confirm('Are you sure you want to delete this farmer? This action cannot be undone.')) {
       try {
         const token = localStorage.getItem("token");
+        const farmerId = farmer.farmer_id || farmer.user_id;
         // Use farmer-specific endpoint with location validation
         await API.delete(`/api/farmers/${farmerId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         fetchManagedFarmers();
         fetchStatistics();
         alert('Farmer deleted successfully');
@@ -242,7 +261,7 @@ function SubAdminDashboard() {
           <nav className="space-y-2">
             {[
               { id: 'overview', label: 'Overview', icon: 'dashboard' },
-              { id: 'farmers', label: 'Farmers', icon: 'people' },
+              { id: 'orders', label: 'Orders', icon: 'shopping_cart' },
               { id: 'analytics', label: 'Analytics', icon: 'analytics' },
               { id: 'settings', label: 'Settings', icon: 'settings' }
             ].map((item) => (
@@ -270,8 +289,8 @@ function SubAdminDashboard() {
           <div className="px-6 py-4">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-3xl font-bold text-white mb-1">{t('subAdminDashboard.title', 'Sub Admin Dashboard')}</h1>
-                <p className="text-white/70">{t('subAdminDashboard.subtitle', 'Manage farmers in your assigned location')}</p>
+                <h1 className="text-3xl font-bold text-white mb-1">{t('title', 'Sub Admin Dashboard')}</h1>
+                <p className="text-white/70">{t('subtitle', 'Manage farmers in your assigned location')}</p>
               </div>
               <div className="flex items-center space-x-4">
                 {/* Language Selector */}
@@ -322,48 +341,69 @@ function SubAdminDashboard() {
           {activeSection === 'overview' && (
             <div className="space-y-6">
               {/* Enhanced Statistics Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 hover:bg-white/15 transition-all duration-300">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
                       <span className="text-white text-xl">groups</span>
                     </div>
-                    <span className="text-white/70 text-sm font-medium">{t('subAdminDashboard.managed', 'Managed')}</span>
+                    <span className="text-white/70 text-sm font-medium">{t('managed', 'Managed')}</span>
                   </div>
-                  <h3 className="text-white/80 text-sm mb-2">{t('subAdminDashboard.managedFarmers', 'Farmers I Manage')}</h3>
-                  <p className="text-3xl font-bold text-white">{managedInfo.count || 0}</p>
+                  <h3 className="text-white/80 text-sm mb-2">{t('managedFarmers', 'Farmers I Manage')}</h3>
+                  <p className="text-3xl font-bold text-white">{farmers.length || 0}</p>
                   <p className="text-white/60 text-xs mt-2">{t('subAdminDashboard.at', 'At')} {managedInfo.management_level || 'sector'} {t('subAdminDashboard.level', 'level')}</p>
                   <div className="mt-4 h-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full opacity-30"></div>
                 </div>
-                
+
                 <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 hover:bg-white/15 transition-all duration-300">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                      <span className="text-white text-xl">check_circle</span>
+                      <span className="text-white text-xl">shopping_cart</span>
                     </div>
-                    <span className="text-white/70 text-sm font-medium">{t('subAdminDashboard.active', 'Active')}</span>
+                    <span className="text-white/70 text-sm font-medium">{t('orders', 'Orders')}</span>
                   </div>
-                  <h3 className="text-white/80 text-sm mb-2">{t('subAdminDashboard.activeFarmers', 'Active Farmers')}</h3>
-                  <p className="text-3xl font-bold text-white">{statistics.activeFarmers || statistics.activeUsers || 0}</p>
+                  <h3 className="text-white/80 text-sm mb-2">{t('totalOrders', 'Total Orders')}</h3>
+                  <p className="text-3xl font-bold text-white">{orders.length || 0}</p>
+                  <p className="text-white/60 text-xs mt-2">{t('fromManagedFarmers', 'From managed farmers')}</p>
                   <div className="mt-4 h-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full opacity-30"></div>
                 </div>
-                
+
+                <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 hover:bg-white/15 transition-all duration-300">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+                      <span className="text-white text-xl">payments</span>
+                    </div>
+                    <span className="text-white/70 text-sm font-medium">{t('revenue', 'Revenue')}</span>
+                  </div>
+                  <h3 className="text-white/80 text-sm mb-2">{t('totalRevenue', 'Total Revenue')}</h3>
+                  <p className="text-3xl font-bold text-white">
+                    {orders.reduce((sum, order) => sum + (order.total_amount || 0), 0).toLocaleString()} RWF
+                  </p>
+                  <p className="text-white/60 text-xs mt-2">{t('allTime', 'All time')}</p>
+                  <div className="mt-4 h-2 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full opacity-30"></div>
+                </div>
+
                 <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 hover:bg-white/15 transition-all duration-300">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
                       <span className="text-white text-xl">location_on</span>
                     </div>
-                    <span className="text-white/70 text-sm font-medium">{t('subAdminDashboard.location', 'Location')}</span>
+                    <span className="text-white/70 text-sm font-medium">{t('location', 'Location')}</span>
                   </div>
-                  <h3 className="text-white/80 text-sm mb-2">{t('subAdminDashboard.myLocation', 'My Location')}</h3>
-                  <p className="text-xl font-bold text-white">{statistics.myLocation || t('subAdminDashboard.notAssigned', 'Not assigned')}</p>
+                  <h3 className="text-white/80 text-sm mb-2">{t('myLocation', 'My Location')}</h3>
+                  <p className="text-xl font-bold text-white">
+                    {managedInfo.assigned_location?.province || statistics.myLocation || t('notAssigned', 'Not assigned')}
+                  </p>
+                  <p className="text-white/60 text-xs mt-2">
+                    {managedInfo.assigned_location?.district ? `${managedInfo.assigned_location.district}, ${managedInfo.assigned_location.sector}` : ''}
+                  </p>
                   <div className="mt-4 h-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full opacity-30"></div>
                 </div>
               </div>
 
               {/* Recent Activity */}
               <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
-                <h2 className="text-xl font-bold text-white mb-4">{t('subAdminDashboard.recentActivity', 'Recent Activity')}</h2>
+                <h2 className="text-xl font-bold text-white mb-4">{t('recentActivity', 'Recent Activity')}</h2>
                 <div className="space-y-3">
                   {farmers.slice(0, 5).map((farmer) => (
                     <div key={farmer.user_id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
@@ -376,9 +416,47 @@ function SubAdminDashboard() {
                           <p className="text-white/60 text-sm">{farmer.email}</p>
                         </div>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(farmer.status)}`}>
-                        {farmer.status}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(farmer.status)}`}>
+                          {farmer.status}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setSelectedFarmer(farmer);
+                            setShowViewFarmerModal(true);
+                          }}
+                          className="p-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded-lg transition-colors"
+                          title="View Details"
+                        >
+                          <span className="text-sm">visibility</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedFarmer(farmer);
+                            setFarmerData({
+                              full_name: farmer.full_name || '',
+                              email: farmer.email || '',
+                              phone: farmer.phone || '',
+                              province: farmer.province || '',
+                              district: farmer.district || '',
+                              sector: farmer.sector || '',
+                              cooperative_name: farmer.cooperative_name || ''
+                            });
+                            setShowEditFarmerModal(true);
+                          }}
+                          className="p-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-colors"
+                          title="Edit Farmer"
+                        >
+                          <span className="text-sm">edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteFarmer(farmer)}
+                          className="p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors"
+                          title="Delete Farmer"
+                        >
+                          <span className="text-sm">delete</span>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -389,102 +467,61 @@ function SubAdminDashboard() {
           {/* Farmers Section */}
           {activeSection === 'farmers' && (
             <div className="space-y-6">
-              {/* Filters */}
-              <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <input
-                    type="text"
-                    placeholder={t('subAdminDashboard.searchPlaceholder', 'Search farmers...')}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="">{t('subAdminDashboard.allStatus', 'All Status')}</option>
-                    <option value="active">{t('subAdminDashboard.active', 'Active')}</option>
-                    <option value="banned">{t('subAdminDashboard.banned', 'Banned')}</option>
-                    <option value="suspended">{t('subAdminDashboard.suspended', 'Suspended')}</option>
-                  </select>
-                </div>
+              <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-8 text-center">
+                <h3 className="text-2xl font-bold text-white mb-4">{t('managedFarmers', 'Managed Farmers')}</h3>
+                <div className="text-6xl font-bold text-purple-400 mb-4">{managedInfo.count || farmers.length}</div>
+                <p className="text-white/70 mb-2">
+                  {t('managementLevel', 'Management Level')}: {managedInfo.management_level || 'Not assigned'}
+                </p>
+                {managedInfo.assigned_location && (
+                  <p className="text-white/70">
+                    {t('assignedLocation', 'Assigned Location')}: {managedInfo.assigned_location.province}, {managedInfo.assigned_location.district}, {managedInfo.assigned_location.sector}
+                  </p>
+                )}
               </div>
+            </div>
+          )}
 
-              {/* Farmers Table */}
-              <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-white/5">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
-                          {t('subAdminDashboard.farmerInfo', 'Farmer Information')}
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
-                          {t('subAdminDashboard.role', 'Role')}
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
-                          {t('subAdminDashboard.status', 'Status')}
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
-                          {t('subAdminDashboard.location', 'Location')}
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">
-                          {t('subAdminDashboard.actions', 'Actions')}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/10">
-                      {currentFarmers.map((farmer) => (
-                        <tr key={farmer.user_id} className="hover:bg-white/5 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <div className="text-sm font-medium text-white">{farmer.full_name}</div>
-                              <div className="text-sm text-white/60">{farmer.email}</div>
-                              <div className="text-sm text-white/60">{farmer.phone}</div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeClass(farmer.role)}`}>
-                              {farmer.role}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(farmer.status)}`}>
-                              {farmer.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-white/60">
-                            {farmer.location}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleViewFarmer(farmer)}
-                                className="text-blue-400 hover:text-blue-300 transition-colors"
-                              >
-                                {t('subAdminDashboard.view', 'View')}
-                              </button>
-                              <button
-                                onClick={() => handleEditFarmer(farmer)}
-                                className="text-green-400 hover:text-green-300 transition-colors"
-                              >
-                                {t('subAdminDashboard.edit', 'Edit')}
-                              </button>
-                              <button
-                                onClick={() => handleDeleteFarmer(farmer.user_id)}
-                                className="text-red-400 hover:text-red-300 transition-colors"
-                              >
-                                {t('subAdminDashboard.delete', 'Delete')}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+          {/* Orders Section */}
+          {activeSection === 'orders' && (
+            <div className="space-y-6">
+              <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
+                <h2 className="text-xl font-bold text-white mb-4">{t('managedFarmersOrders', 'Managed Farmers Orders')}</h2>
+                <p className="text-white/70 mb-4">View orders from farmers you manage</p>
+
+                {orders.length > 0 ? (
+                  <div className="space-y-4">
+                    {orders.map((order) => (
+                      <div key={order.order_id} className="bg-white/5 rounded-xl p-4 hover:bg-white/10 transition-all duration-300">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <p className="text-white font-medium">Order #{order.order_id}</p>
+                            <p className="text-white/60 text-sm">Buyer: {order.buyer_name || 'Unknown'}</p>
+                            <p className="text-white/60 text-sm">Farmer: {order.farmer_name || 'Unknown'}</p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            order.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                            order.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
+                            order.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {order.status || 'Unknown'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <p className="text-white/70">Total: {order.total_amount || 0} RWF</p>
+                          <p className="text-white/50">{new Date(order.created_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white/5 rounded-xl p-6 text-center">
+                    <span className="text-4xl mb-2 block">shopping_cart</span>
+                    <p className="text-white/70">No orders found</p>
+                    <p className="text-white/50 text-sm mt-2">Orders from your managed farmers will appear here</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -493,15 +530,68 @@ function SubAdminDashboard() {
           {activeSection === 'analytics' && (
             <div className="space-y-6">
               <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
-                <h2 className="text-xl font-bold text-white mb-4">{t('subAdminDashboard.analytics', 'Analytics')}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <h2 className="text-xl font-bold text-white mb-4">{t('analytics', 'Analytics')}</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="bg-white/5 rounded-xl p-4">
-                    <h3 className="text-white font-medium mb-2">{t('subAdminDashboard.farmerGrowth', 'Farmer Growth')}</h3>
-                    <div className="h-32 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg opacity-20"></div>
+                    <h3 className="text-white font-medium mb-2">{t('totalOrders', 'Total Orders')}</h3>
+                    <p className="text-3xl font-bold text-white">{orders.length || 0}</p>
+                    <p className="text-white/60 text-sm mt-1">From managed farmers</p>
                   </div>
                   <div className="bg-white/5 rounded-xl p-4">
-                    <h3 className="text-white font-medium mb-2">{t('subAdminDashboard.statusDistribution', 'Status Distribution')}</h3>
-                    <div className="h-32 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg opacity-20"></div>
+                    <h3 className="text-white font-medium mb-2">{t('totalRevenue', 'Total Revenue')}</h3>
+                    <p className="text-3xl font-bold text-white">
+                      {orders.reduce((sum, order) => sum + (order.total_amount || 0), 0).toLocaleString()} RWF
+                    </p>
+                    <p className="text-white/60 text-sm mt-1">All time</p>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <h3 className="text-white font-medium mb-2">{t('activeFarmers', 'Active Farmers')}</h3>
+                    <p className="text-3xl font-bold text-white">{managedInfo.count || 0}</p>
+                    <p className="text-white/60 text-sm mt-1">Currently active</p>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <h3 className="text-white font-medium mb-2">{t('pendingOrders', 'Pending Orders')}</h3>
+                    <p className="text-3xl font-bold text-white">
+                      {orders.filter(order => order.status === 'pending').length}
+                    </p>
+                    <p className="text-white/60 text-sm mt-1">Awaiting processing</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <h3 className="text-white font-medium mb-3">Order Status Distribution</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-white/70">Completed</span>
+                        <span className="text-white font-medium">{orders.filter(order => order.status === 'completed').length}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-white/70">Pending</span>
+                        <span className="text-white font-medium">{orders.filter(order => order.status === 'pending').length}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-white/70">Cancelled</span>
+                        <span className="text-white font-medium">{orders.filter(order => order.status === 'cancelled').length}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <h3 className="text-white font-medium mb-3">Farmer Status Distribution</h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-white/70">Active</span>
+                        <span className="text-white font-medium">{farmers.filter(f => f.status === 'active').length}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-white/70">Banned</span>
+                        <span className="text-white font-medium">{farmers.filter(f => f.status === 'banned').length}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-white/70">Suspended</span>
+                        <span className="text-white font-medium">{farmers.filter(f => f.status === 'suspended').length}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -512,7 +602,7 @@ function SubAdminDashboard() {
           {activeSection === 'settings' && (
             <div className="space-y-6">
               <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
-                <h2 className="text-xl font-bold text-white mb-4">{t('subAdminDashboard.settings', 'Settings')}</h2>
+                <h2 className="text-xl font-bold text-white mb-4">{t('settings', 'Settings')}</h2>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
                     <div>
@@ -538,12 +628,127 @@ function SubAdminDashboard() {
                       <option value="rw">Kinyarwanda</option>
                     </select>
                   </div>
+                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                    <div>
+                      <p className="text-white font-medium">{t('myLocation', 'My Assigned Location')}</p>
+                      <p className="text-white/60 text-sm">{t('locationDesc', 'View your management area')}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white font-medium">
+                        {managedInfo.assigned_location?.province || 'Not assigned'}, {managedInfo.assigned_location?.district || ''}, {managedInfo.assigned_location?.sector || ''}
+                      </p>
+                      <p className="text-white/50 text-sm">{managedInfo.management_level || 'Not assigned'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                    <div>
+                      <p className="text-white font-medium">{t('managementLevel', 'Management Level')}</p>
+                      <p className="text-white/60 text-sm">{t('managementLevelDesc', 'Your administrative level')}</p>
+                    </div>
+                    <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm font-medium">
+                      {managedInfo.management_level || 'Not assigned'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
+                    <div>
+                      <p className="text-white font-medium">{t('managedCount', 'Farmers Managed')}</p>
+                      <p className="text-white/60 text-sm">{t('managedCountDesc', 'Total farmers under your supervision')}</p>
+                    </div>
+                    <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-sm font-medium">
+                      {managedInfo.count || 0}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           )}
         </main>
       </div>
+
+      {/* Edit Farmer Modal */}
+      {showEditFarmerModal && selectedFarmer && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold text-white mb-4">{t('editFarmer', 'Edit Farmer')}</h3>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder={t('fullName', 'Full Name')}
+                value={farmerData.full_name}
+                onChange={(e) => setFarmerData({...farmerData, full_name: e.target.value})}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <input
+                type="email"
+                placeholder={t('email', 'Email')}
+                value={farmerData.email}
+                onChange={(e) => setFarmerData({...farmerData, email: e.target.value})}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <input
+                type="tel"
+                placeholder={t('phone', 'Phone')}
+                value={farmerData.phone}
+                onChange={(e) => setFarmerData({...farmerData, phone: e.target.value})}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <input
+                type="text"
+                placeholder={t('province', 'Province')}
+                value={farmerData.province}
+                onChange={(e) => setFarmerData({...farmerData, province: e.target.value})}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <input
+                type="text"
+                placeholder={t('district', 'District')}
+                value={farmerData.district}
+                onChange={(e) => setFarmerData({...farmerData, district: e.target.value})}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <input
+                type="text"
+                placeholder={t('sector', 'Sector')}
+                value={farmerData.sector}
+                onChange={(e) => setFarmerData({...farmerData, sector: e.target.value})}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <input
+                type="text"
+                placeholder={t('cooperativeName', 'Cooperative Name (Optional)')}
+                value={farmerData.cooperative_name}
+                onChange={(e) => setFarmerData({...farmerData, cooperative_name: e.target.value})}
+                className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={handleEditFarmer}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-semibold transition-all duration-300"
+              >
+                {t('save', 'Save Changes')}
+              </button>
+              <button
+                onClick={() => {
+                  setShowEditFarmerModal(false);
+                  setFarmerData({
+                    full_name: "",
+                    email: "",
+                    phone: "",
+                    province: "",
+                    district: "",
+                    sector: "",
+                    cooperative_name: ""
+                  });
+                }}
+                className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl font-semibold transition-all duration-300"
+              >
+                {t('cancel', 'Cancel')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Farmer Modal */}
       {showCreateFarmerModal && (
@@ -567,7 +772,7 @@ function SubAdminDashboard() {
               />
               <input
                 type="tel"
-                placeholder={t('subAdminDashboard.phone', 'Phone')}
+                placeholder={t('phone', 'Phone')}
                 value={farmerData.phone}
                 onChange={(e) => setFarmerData({...farmerData, phone: e.target.value})}
                 className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500"

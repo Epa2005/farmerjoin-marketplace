@@ -9,14 +9,43 @@ const isAdminOrSubAdmin = (req, res, next) => {
     if (!token) {
         return res.status(401).json({ message: 'No token provided' });
     }
-    
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'student');
         if (decoded.role !== 'admin' && decoded.role !== 'sub_admin') {
             return res.status(403).json({ message: 'Access denied. Admin or Sub Admin required.' });
         }
-        req.user = decoded;
-        next();
+
+        // Check user status in database to enforce ban/suspension
+        db.query("SELECT user_id, role, status FROM users WHERE user_id = ?", [decoded.user_id], (err, result) => {
+            if (err) {
+                console.error('Database error checking user status:', err);
+                return res.status(500).json({ message: "Authentication error" });
+            }
+
+            if (result.length === 0) {
+                return res.status(401).json({ message: "User not found" });
+            }
+
+            const user = result[0];
+
+            // Check if user is banned or suspended (case-insensitive)
+            const userStatus = user.status ? user.status.toLowerCase() : 'inactive';
+            if (userStatus !== 'active') {
+                console.log(`User ${decoded.user_id} access denied - status: ${user.status}`);
+                let message = "Account is inactive";
+                if (userStatus === 'banned') {
+                    message = "Your account has been banned. You no longer have access to the system.";
+                } else if (userStatus === 'suspended') {
+                    message = "Your account has been suspended. Contact support for assistance.";
+                }
+                return res.status(403).json({ message: message, status: user.status });
+            }
+
+            req.user = decoded;
+            req.user.status = user.status;
+            next();
+        });
     } catch (error) {
         return res.status(401).json({ message: 'Invalid token' });
     }
@@ -28,14 +57,43 @@ const isAdmin = (req, res, next) => {
     if (!token) {
         return res.status(401).json({ message: 'No token provided' });
     }
-    
+
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'student');
         if (decoded.role !== 'admin') {
             return res.status(403).json({ message: 'Access denied. Admin required.' });
         }
-        req.user = decoded;
-        next();
+
+        // Check user status in database to enforce ban/suspension
+        db.query("SELECT user_id, role, status FROM users WHERE user_id = ?", [decoded.user_id], (err, result) => {
+            if (err) {
+                console.error('Database error checking user status:', err);
+                return res.status(500).json({ message: "Authentication error" });
+            }
+
+            if (result.length === 0) {
+                return res.status(401).json({ message: "User not found" });
+            }
+
+            const user = result[0];
+
+            // Check if user is banned or suspended (case-insensitive)
+            const userStatus = user.status ? user.status.toLowerCase() : 'inactive';
+            if (userStatus !== 'active') {
+                console.log(`User ${decoded.user_id} access denied - status: ${user.status}`);
+                let message = "Account is inactive";
+                if (userStatus === 'banned') {
+                    message = "Your account has been banned. You no longer have access to the system.";
+                } else if (userStatus === 'suspended') {
+                    message = "Your account has been suspended. Contact support for assistance.";
+                }
+                return res.status(403).json({ message: message, status: user.status });
+            }
+
+            req.user = decoded;
+            req.user.status = user.status;
+            next();
+        });
     } catch (error) {
         return res.status(401).json({ message: 'Invalid token' });
     }
@@ -44,17 +102,17 @@ const isAdmin = (req, res, next) => {
 // Get user statistics
 router.get('/statistics', isAdminOrSubAdmin, (req, res) => {
     const queries = {
-        totalUsers: 'SELECT COUNT(*) as count FROM users',
-        activeUsers: 'SELECT COUNT(*) as count FROM users WHERE status = "active"',
-        bannedUsers: 'SELECT COUNT(*) as count FROM users WHERE status = "banned"',
-        suspendedUsers: 'SELECT COUNT(*) as count FROM users WHERE status = "suspended"',
+        total_users: 'SELECT COUNT(*) as count FROM users',
+        activeUsers: 'SELECT COUNT(*) as count FROM users WHERE LOWER(status) = "active"',
+        banned_users: 'SELECT COUNT(*) as count FROM users WHERE LOWER(status) = "banned"',
+        suspended_users: 'SELECT COUNT(*) as count FROM users WHERE LOWER(status) = "suspended"',
         totalFarmers: 'SELECT COUNT(*) as count FROM users WHERE role = "farmer"',
-        activeFarmers: 'SELECT COUNT(*) as count FROM users WHERE role = "farmer" AND status = "active"'
+        activeFarmers: 'SELECT COUNT(*) as count FROM users WHERE role = "farmer" AND LOWER(status) = "active"'
     };
-    
+
     const results = {};
     let completed = 0;
-    
+
     Object.keys(queries).forEach(key => {
         db.query(queries[key], (err, result) => {
             if (err) {
@@ -63,7 +121,7 @@ router.get('/statistics', isAdminOrSubAdmin, (req, res) => {
             } else {
                 results[key] = result[0].count;
             }
-            
+
             completed++;
             if (completed === Object.keys(queries).length) {
                 // Get sub_admin specific location if user is sub_admin

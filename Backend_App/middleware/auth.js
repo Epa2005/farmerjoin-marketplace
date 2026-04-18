@@ -1,43 +1,73 @@
 const jwt = require("jsonwebtoken");
 const rateLimit = require('express-rate-limit');
+const db = require("../dbConnection");
 
 // Enhanced authentication middleware with security improvements
 module.exports = (req, res, next) => {
   // First check for JWT token
   const authHeader = req.headers.authorization;
   console.log('Auth header:', authHeader);
-  
+
   if (authHeader) {
     try {
       // Extract token from "Bearer <token>" format
       const token = authHeader.replace('Bearer ', '');
       console.log('Token extracted:', token.substring(0, 50) + '...');
-      
+
       // Validate token format
       if (!token || token.split('.').length !== 3) {
         console.log('Invalid token format');
         return res.status(401).json({ message: "Invalid token format" });
       }
-      
+
       const decoded = jwt.verify(token, process.env.JWT_SECRET || "secretkey");
       console.log('Token decoded successfully:', decoded);
-      
+
       // Validate decoded token structure
       if (!decoded.user_id || !decoded.role) {
         console.log('Invalid token payload:', decoded);
         return res.status(401).json({ message: "Invalid token payload" });
       }
-      
-      req.user = decoded;
-      console.log('Authentication successful for user:', decoded.user_id);
-      return next();
+
+      // Check user status in database to enforce ban/suspension
+      db.query("SELECT user_id, role, status FROM users WHERE user_id = ?", [decoded.user_id], (err, result) => {
+        if (err) {
+          console.error('Database error checking user status:', err);
+          return res.status(500).json({ message: "Authentication error" });
+        }
+
+        if (result.length === 0) {
+          console.log('User not found in database:', decoded.user_id);
+          return res.status(401).json({ message: "User not found" });
+        }
+
+        const user = result[0];
+
+        // Check if user is banned or suspended (case-insensitive)
+        const userStatus = user.status ? user.status.toLowerCase() : 'inactive';
+        if (userStatus !== 'active') {
+          console.log(`User ${decoded.user_id} access denied - status: ${user.status}`);
+          let message = "Account is inactive";
+          if (userStatus === 'banned') {
+            message = "Your account has been banned. You no longer have access to the system.";
+          } else if (userStatus === 'suspended') {
+            message = "Your account has been suspended. Contact support for assistance.";
+          }
+          return res.status(403).json({ message: message, status: user.status });
+        }
+
+        req.user = decoded;
+        req.user.status = user.status;
+        console.log('Authentication successful for user:', decoded.user_id, 'status:', user.status);
+        return next();
+      });
     } catch (error) {
       // Log security event with detailed error
       console.warn('JWT verification failed:', error.message);
       console.warn('JWT Error Name:', error.name);
       console.warn('JWT Secret used:', process.env.JWT_SECRET ? 'From env' : 'Default (secretkey)');
       console.warn('JWT Token received (first 100 chars):', authHeader?.replace('Bearer ', '').substring(0, 100));
-      
+
       // Token invalid - return 401 immediately with specific error
       if (error.name === 'TokenExpiredError') {
         return res.status(401).json({ message: "Token expired, please login again" });
@@ -56,21 +86,37 @@ module.exports = (req, res, next) => {
       req.session.destroy();
       return res.status(401).json({ message: "Invalid session structure" });
     }
-    
-    // Get user from database to get user_id
+
+    // Get user from database to check status
     const db = require("../dbConnection");
-    db.query("SELECT user_id, role FROM users WHERE username=? AND status='active'", [req.session.user], (err, result) => {
+    db.query("SELECT user_id, role, status FROM users WHERE username=?", [req.session.user], (err, result) => {
       if (err) {
         console.error('Database error in auth middleware:', err);
         return res.status(500).json({ message: "Authentication error" });
       }
-      
+
       if (result.length === 0) {
         req.session.destroy();
         return res.status(401).json({ message: "Invalid session" });
       }
-      
-      req.user = { user_id: result[0].user_id, role: result[0].role };
+
+      const user = result[0];
+
+      // Check if user is banned or suspended (case-insensitive)
+      const userStatus = user.status ? user.status.toLowerCase() : 'inactive';
+      if (userStatus !== 'active') {
+        console.log(`Session user ${user.user_id} access denied - status: ${user.status}`);
+        req.session.destroy();
+        let message = "Account is inactive";
+        if (userStatus === 'banned') {
+          message = "Your account has been banned. You no longer have access to the system.";
+        } else if (userStatus === 'suspended') {
+          message = "Your account has been suspended. Contact support for assistance.";
+        }
+        return res.status(403).json({ message: message, status: user.status });
+      }
+
+      req.user = { user_id: user.user_id, role: user.role, status: user.status };
       next();
     });
   } else {

@@ -20,7 +20,23 @@ API.interceptors.response.use(
   },
   (error) => {
     console.log('Response interceptor - Error:', error.response?.status);
-    // Don't automatically clear tokens - let individual components handle it
+
+    // Handle banned/suspended users
+    if (error.response?.status === 403) {
+      const data = error.response.data;
+      if (data?.status === 'banned' || data?.status === 'suspended') {
+        console.log('User account status:', data.status);
+        // Show alert message
+        alert(data.message || 'Your account has been deactivated');
+        // Clear all authentication data
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        // Redirect to login
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
