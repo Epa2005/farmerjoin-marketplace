@@ -85,17 +85,21 @@ router.post('/mobile-money/checkout', async (req, res) => {
                 });
             }
             
-            // Reduce product stock
-            const newStock = productResult.quantity - item.quantity;
-            const stockUpdateQuery = 'UPDATE products SET quantity = ? WHERE product_id = ?';
+            // Reduce stock immediately (for simulation mode and reliability)
             await new Promise((resolve, reject) => {
-                db.query(stockUpdateQuery, [newStock, item.product_id], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
+                db.query(
+                    'UPDATE products SET quantity = quantity - ? WHERE product_id = ? AND quantity >= ?',
+                    [item.quantity, item.product_id, item.quantity],
+                    (err, results) => {
+                        if (err) reject(err);
+                        else {
+                            console.log(`Stock reduced for product ${item.product_id} by ${item.quantity}`);
+                            console.log(`Affected rows:`, results.affectedRows);
+                            resolve();
+                        }
+                    }
+                );
             });
-            
-            console.log(`Stock reduced for product ${item.product_id}: ${productResult.quantity} -> ${newStock}`);
             
             await new Promise((resolve, reject) => {
                 db.query(orderItemQuery, [orderId, item.product_id, item.quantity, item.price, productResult.farmer_id], (err) => {
@@ -226,6 +230,23 @@ router.post('/mobile-money/callback', async (req, res) => {
         const { paymentId, reference, isSuccessful, amount, phoneNumber } = callbackData;
         
         if (isSuccessful) {
+            // Get order details to reduce stock
+            const orderItemsQuery = `
+                SELECT oi.product_id, oi.quantity 
+                FROM order_items oi
+                JOIN orders o ON oi.order_id = o.order_id
+                WHERE o.payment_reference = ? OR o.payment_id = ?
+            `;
+            
+            const orderItems = await new Promise((resolve, reject) => {
+                db.query(orderItemsQuery, [reference, paymentId], (err, results) => {
+                    if (err) reject(err);
+                    else resolve(results);
+                });
+            });
+            
+            // Stock already reduced in initial checkout, no need to reduce again
+            
             // Update order to paid status
             await new Promise((resolve, reject) => {
                 db.query(

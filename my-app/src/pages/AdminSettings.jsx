@@ -30,7 +30,10 @@ function AdminSettings() {
   const fetchSettings = async () => {
     try {
       const token = localStorage.getItem("token");
-      // Since we don't have a settings endpoint yet, use default settings
+      const response = await API.get("/admin/settings", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSettings(response.data || {});
       setLoading(false);
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -45,11 +48,11 @@ function AdminSettings() {
 
     try {
       const token = localStorage.getItem("token");
-      // Simulate saving settings
-      setTimeout(() => {
-        setMessage("Settings saved successfully!");
-        setSaving(false);
-      }, 1000);
+      await API.put("/admin/settings", settings, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setMessage("Settings saved successfully!");
+      setSaving(false);
     } catch (error) {
       console.error("Error saving settings:", error);
       setMessage("Failed to save settings");

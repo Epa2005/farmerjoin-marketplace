@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import API from "../api";
 import { useTranslation } from "../hooks/useTranslation";
 import { useCart } from "../context/CartContext";
@@ -7,6 +7,7 @@ import { useCart } from "../context/CartContext";
 function ProductDetail() {
     const { productId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { t } = useTranslation();
     const { addToCart } = useCart();
     const [product, setProduct] = useState(null);
@@ -14,21 +15,22 @@ function ProductDetail() {
     const [error, setError] = useState(null);
     const [quantity, setQuantity] = useState(1);
     const [addingToCart, setAddingToCart] = useState(false);
+    const [relatedProducts, setRelatedProducts] = useState([]);
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [showFullImage, setShowFullImage] = useState(false);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        const user = JSON.parse(localStorage.getItem('user'));
-        
-        if (!token || !user) {
-            navigate('/login');
-            return;
-        }
-
         // Fetch product details
         setLoading(true);
         API.get(`/products/${productId}`)
             .then(res => {
                 setProduct(res.data);
+                // Use selected image from navigation state if available, otherwise use product image
+                setSelectedImage(location.state?.selectedImage || res.data.image);
+                // Fetch related products from the same farmer
+                if (res.data.farmer_id) {
+                    fetchRelatedProducts(res.data.farmer_id, productId);
+                }
                 setLoading(false);
             })
             .catch(err => {
@@ -36,11 +38,31 @@ function ProductDetail() {
                 setError(err?.response?.data?.message || 'Failed to load product details');
                 setLoading(false);
             });
-    }, [productId, navigate]);
+    }, [productId, location.state]);
+
+    const fetchRelatedProducts = async (farmerId, currentProductId) => {
+        try {
+            const response = await API.get(`/products?farmer_id=${farmerId}`);
+            // Filter out the current product and limit to 4 products
+            const filtered = response.data
+                .filter(p => p.product_id !== parseInt(currentProductId))
+                .slice(0, 4);
+            setRelatedProducts(filtered);
+        } catch (error) {
+            console.error('Error fetching related products:', error);
+        }
+    };
 
     const handleAddToCart = async () => {
         if (!product || product.quantity <= 0) return;
-        
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Please login to add items to cart');
+            navigate('/login');
+            return;
+        }
+
         setAddingToCart(true);
         try {
             await addToCart(product, quantity);
@@ -127,389 +149,350 @@ function ProductDetail() {
                 </nav>
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                    {/* Main Content */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Product Images */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Left: Product Images */}
+                    <div className="lg:col-span-1 space-y-4">
+                        {/* Product Images Gallery */}
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                            <div className="relative">
-                                {product.image || product.image_url ? (
-                                    <img 
-                                        src={product.image?.startsWith('uploads/') ? 
-                                            `http://localhost:5000/${product.image}` : 
-                                            `http://localhost:5000/uploads/products/${product.image || product.image_url}`} 
-                                        alt={product.product_name}
-                                        className="w-full h-96 object-cover"
-                                        onError={(e) => {
-                                            console.error('Image load error in ProductDetail:', e);
-                                            console.log('Failed image URL:', `http://localhost:5000/${product.image || product.image_url}`);
-                                            console.log('Product data:', product);
-                                            // Replace with fallback SVG
-                                            e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect width="400" height="400" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%239ca3af" font-family="Arial" font-size="24"%3E%F0%9F%8C%BE%3C/text%3E%3C/svg%3E';
-                                            // Prevent infinite error loop
-                                            e.onerror = null;
-                                        }}
-                                        onLoad={() => {
-                                            console.log('Image loaded successfully in ProductDetail for:', product.product_name);
-                                        }}
-                                    />
-                                ) : (
-                                    <div className="w-full h-96 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                        <div className="text-8xl text-gray-300 dark:text-gray-600">?</div>
-                                    </div>
-                                )}
-                                
-                                {/* Stock Badge */}
-                                <div className="absolute top-4 right-4">
-                                    <span className={`px-4 py-2 rounded-full text-sm font-bold ${
-                                        product.quantity > 0 
-                                            ? 'bg-primary-600 text-white' 
-                                            : 'bg-red-500 text-white'
-                                    }`}>
-                                        {product.quantity > 0 ? `${product.quantity} ${t('inStock') || 'in stock'}` : t('outOfStock') || 'Out of Stock'}
-                                    </span>
+                            {/* Main Image */}
+                            <div className="relative group">
+                                <div 
+                                    className="w-full aspect-square overflow-hidden cursor-pointer bg-gray-100 dark:bg-gray-700"
+                                    onClick={() => setShowFullImage(true)}
+                                >
+                                    {selectedImage ? (
+                                        <img 
+                                            src={selectedImage.startsWith('http') ? selectedImage : `http://localhost:5000/${selectedImage}`}
+                                            alt={product.product_name}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            onLoad={(e) => {
+                                                console.log('Main image loaded successfully:', product.product_name);
+                                            }}
+                                            onError={(e) => {
+                                                console.error('Main image load error:', selectedImage);
+                                                // Try alternative URL patterns
+                                                const alternatives = [
+                                                    `http://localhost:5000/uploads/products/${selectedImage.split('/').pop()}`,
+                                                    `http://localhost:5000/uploads/${selectedImage}`,
+                                                    selectedImage
+                                                ];
+                                                let tried = 0;
+                                                const tryNext = () => {
+                                                    if (tried < alternatives.length) {
+                                                        e.target.src = alternatives[tried];
+                                                        tried++;
+                                                    } else {
+                                                        // Show fallback
+                                                        e.target.style.display = 'none';
+                                                        e.target.parentElement.innerHTML = '<div class="w-full h-full bg-gradient-to-br from-emerald-100 to-cyan-100 dark:from-emerald-900/20 dark:to-cyan-900/20 flex items-center justify-center"><span class="text-6xl">🌾</span></div>';
+                                                    }
+                                                };
+                                                tryNext();
+                                            }}
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-emerald-100 to-cyan-100 dark:from-emerald-900/20 dark:to-cyan-900/20 flex items-center justify-center">
+                                            <span className="text-6xl">🌾</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="absolute top-3 right-3 bg-black/50 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                                    🔍 Zoom
+                                </div>
+                            </div>
+
+                            {/* Thumbnail Gallery */}
+                            <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+                                <div className="flex gap-2 overflow-x-auto">
+                                    {product.image && (
+                                        <div
+                                            onClick={() => setSelectedImage(product.image)}
+                                            className={`flex-shrink-0 w-16 h-16 rounded cursor-pointer border-2 transition-all bg-gray-100 dark:bg-gray-700 ${
+                                                selectedImage === product.image
+                                                    ? 'border-emerald-500 shadow-md'
+                                                    : 'border-gray-200 dark:border-gray-600 hover:border-emerald-300'
+                                            }`}
+                                        >
+                                            <img
+                                                src={product.image.startsWith('http') ? product.image : `http://localhost:5000/${product.image}`}
+                                                alt="Main"
+                                                className="w-full h-full object-cover rounded"
+                                                onLoad={() => console.log('Thumbnail loaded:', product.product_name)}
+                                                onError={(e) => {
+                                                    const alternatives = [
+                                                        `http://localhost:5000/uploads/products/${product.image.split('/').pop()}`,
+                                                        `http://localhost:5000/uploads/${product.image}`,
+                                                        product.image
+                                                    ];
+                                                    let tried = 0;
+                                                    const tryNext = () => {
+                                                        if (tried < alternatives.length) {
+                                                            e.target.src = alternatives[tried];
+                                                            tried++;
+                                                        } else {
+                                                            e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center"><span class="text-xl">🌾</span></div>';
+                                                        }
+                                                    };
+                                                    tryNext();
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                    {relatedProducts.slice(0, 4).map((relatedProduct) => (
+                                        relatedProduct.image && (
+                                            <div
+                                                key={relatedProduct.product_id}
+                                                onClick={() => setSelectedImage(relatedProduct.image)}
+                                                className={`flex-shrink-0 w-16 h-16 rounded cursor-pointer border-2 transition-all bg-gray-100 dark:bg-gray-700 ${
+                                                    selectedImage === relatedProduct.image
+                                                        ? 'border-emerald-500 shadow-md'
+                                                        : 'border-gray-200 dark:border-gray-600 hover:border-emerald-300'
+                                                }`}
+                                            >
+                                                <img
+                                                    src={relatedProduct.image.startsWith('http') ? relatedProduct.image : `http://localhost:5000/${relatedProduct.image}`}
+                                                    alt={relatedProduct.product_name}
+                                                    className="w-full h-full object-cover rounded"
+                                                    onError={(e) => {
+                                                        const alternatives = [
+                                                            `http://localhost:5000/uploads/products/${relatedProduct.image.split('/').pop()}`,
+                                                            `http://localhost:5000/uploads/${relatedProduct.image}`,
+                                                            relatedProduct.image
+                                                        ];
+                                                        let tried = 0;
+                                                        const tryNext = () => {
+                                                            if (tried < alternatives.length) {
+                                                                e.target.src = alternatives[tried];
+                                                                tried++;
+                                                            } else {
+                                                                e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center"><span class="text-xl">🌾</span></div>';
+                                                            }
+                                                        };
+                                                        tryNext();
+                                                    }}
+                                                />
+                                            </div>
+                                        )
+                                    ))}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Product Info */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 border border-gray-200 dark:border-gray-700">
-                            <div className="mb-6">
-                                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{product.product_name}</h1>
-                                <div className="flex items-center space-x-4 mb-4">
-                                    <span className="inline-block bg-primary-100 text-primary-700 text-sm px-3 py-1 rounded-full font-semibold">
-                                        {product.category}
-                                    </span>
-                                    <div className="flex items-center">
-                                        <span className="text-yellow-500">⭐</span>
-                                        <span className="text-gray-600 dark:text-gray-400 ml-1">4.5 (23 {t('reviews') || 'reviews'})</span>
+                        {/* Full Image Modal */}
+                        {showFullImage && selectedImage && (
+                            <div
+                                className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+                                onClick={() => setShowFullImage(false)}
+                            >
+                                <img
+                                    src={selectedImage.startsWith('http') ? selectedImage : `http://localhost:5000/${selectedImage}`}
+                                    alt={product.product_name}
+                                    className="max-w-full max-h-full object-contain"
+                                    onClick={(e) => e.stopPropagation()}
+                                />
+                                <button
+                                    onClick={() => setShowFullImage(false)}
+                                    className="absolute top-4 right-4 text-white text-4xl hover:text-gray-300"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Right: Product Details */}
+                    <div className="lg:col-span-2 space-y-4">
+                        {/* Product Title */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                            <div className="flex items-start justify-between mb-4">
+                                <div>
+                                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{product.product_name}</h1>
+                                    <div className="flex items-center space-x-3">
+                                        <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs px-3 py-1 rounded-full font-semibold">
+                                            {product.category}
+                                        </span>
+                                        <span className="text-gray-500 dark:text-gray-400 text-sm">|</span>
+                                        <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                                            <span className="text-yellow-500 mr-1">⭐</span>
+                                            <span>4.5 (23 reviews)</span>
+                                        </div>
                                     </div>
                                 </div>
-                                
-                                <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed mb-6">
-                                    {product.description || t('freshHighQualityProduce') || 'Fresh, high-quality produce directly from the farm. Grown with care and harvested at peak freshness.'}
-                                </p>
+                                <div className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                    product.quantity > 0 
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' 
+                                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                }`}>
+                                    {product.quantity > 0 ? `${product.quantity} in stock` : 'Out of Stock'}
+                                </div>
+                            </div>
 
-                                {/* Farmer Information Card */}
-                                <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 rounded-xl p-6 mb-6 border border-green-200 dark:border-green-700">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">👨‍🌾 {t('aboutThisFarmer') || 'About This Farmer'}</h3>
-                                        <div className="flex items-center space-x-2">
-                                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                            <span className="text-sm text-green-600 dark:text-green-400 font-medium">{t('verifiedFarmer') || 'Verified Farmer'}</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start space-x-4">
-                                        <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                                            {product.farmer_name ? product.farmer_name.charAt(0).toUpperCase() : 'F'}
-                                        </div>
-                                        <div className="flex-1">
-                                            <h4 className="font-semibold text-gray-900 dark:text-white text-lg mb-1">
-                                                {product.farmer_name || t('localFarmer') || 'Local Farmer'}
-                                            </h4>
-                                            <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
-                                                {t('supportingLocalFarmers') || 'By purchasing from this farmer, you\'re supporting local agriculture and sustainable farming practices.'}
-                                            </p>
-                                            <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                                                <span className="flex items-center">
-                                                    📍 {t('localFarm') || 'Local Farm'}
-                                                </span>
-                                                <span className="flex items-center">
-                                                    🌱 {t('organic') || 'Organic Methods'}
-                                                </span>
-                                                <span className="flex items-center">
-                                                    ⭐ 4.8 {t('rating') || 'Rating'}
-                                                </span>
+                            <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">
+                                {product.description || 'Fresh, high-quality produce directly from the farm. Grown with care and harvested at peak freshness.'}
+                            </p>
+
+                            {/* Price Section */}
+                            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-lg p-4 mb-4">
+                                <div className="flex items-baseline gap-3">
+                                    <span className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                                        RWF {parseFloat(product.price || 0).toLocaleString()}
+                                    </span>
+                                    <span className="text-sm text-gray-500 dark:text-gray-400">per unit</span>
+                                </div>
+                            </div>
+
+                            {/* Quantity Selector */}
+                            <div className="flex items-center gap-4 mb-4">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Quantity:</span>
+                                <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
+                                    <button 
+                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                        className="w-10 h-10 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border-r border-gray-300 dark:border-gray-600"
+                                    >
+                                        -
+                                    </button>
+                                    <input 
+                                        type="number" 
+                                        min="1" 
+                                        max={product.quantity}
+                                        value={quantity}
+                                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                        className="w-16 h-10 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-none focus:outline-none"
+                                    />
+                                    <button 
+                                        onClick={() => setQuantity(Math.min(product.quantity, quantity + 1))}
+                                        className="w-10 h-10 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border-l border-gray-300 dark:border-gray-600"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                    Available: {product.quantity}
+                                </span>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    disabled={product.quantity <= 0 || addingToCart}
+                                    onClick={handleAddToCart}
+                                    className={`py-3 px-6 rounded-lg font-semibold transition-all ${
+                                        product.quantity > 0 && !addingToCart
+                                            ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 shadow-lg'
+                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    }`}
+                                >
+                                    {addingToCart ? 'Adding...' : 'Add to Cart'}
+                                </button>
+                                <Link
+                                    to="/cart"
+                                    className="py-3 px-6 rounded-lg font-semibold bg-orange-500 text-white hover:bg-orange-600 text-center transition-colors shadow-lg"
+                                >
+                                    View Cart
+                                </Link>
+                            </div>
+                        </div>
+
+                        {/* Supplier Information */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center">
+                                <span className="text-xl mr-2">👨‍🌾</span>
+                                Supplier Information
+                            </h3>
+                            <div className="flex items-start gap-4">
+                                <div className="w-14 h-14 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+                                    {product.farmer_name ? product.farmer_name.charAt(0).toUpperCase() : 'F'}
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">
+                                        {product.farmer_name || 'Local Farmer'}
+                                    </h4>
+                                    <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                        {product.farmer_email && (
+                                            <div className="flex items-center">
+                                                <span className="mr-2">📧</span>
+                                                <span>{product.farmer_email}</span>
                                             </div>
-                                        </div>
+                                        )}
+                                        {product.farmer_phone && (
+                                            <div className="flex items-center">
+                                                <span className="mr-2">📞</span>
+                                                <span>{product.farmer_phone}</span>
+                                            </div>
+                                        )}
+                                        {product.farm_location && (
+                                            <div className="flex items-center">
+                                                <span className="mr-2">📍</span>
+                                                <span>{product.farm_location}</span>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="mt-4 pt-4 border-t border-green-200 dark:border-green-700">
-                                        <div className="space-y-4">
-                                            {/* Farmer Contact Information */}
-                                            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                                                <h5 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
-                                                    <span className="text-xl mr-2">{'\ud83d\udc64'}</span>
-                                                    {t('farmerInformation') || 'Farmer Information'}
-                                                </h5>
-                                                <div className="space-y-2">
-                                                    {product.farmer_name && (
-                                                        <div className="flex items-center text-sm">
-                                                            <span className="font-medium text-gray-600 dark:text-gray-400 w-20">
-                                                                {t('name') || 'Name'}:
-                                                            </span>
-                                                            <span className="text-gray-900 dark:text-white">
-                                                                {product.farmer_name}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {product.farmer_email && (
-                                                        <div className="flex items-center text-sm">
-                                                            <span className="font-medium text-gray-600 dark:text-gray-400 w-20">
-                                                                {t('email') || 'Email'}:
-                                                            </span>
-                                                            <span className="text-gray-900 dark:text-white">
-                                                                {product.farmer_email}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {product.farmer_phone && (
-                                                        <div className="flex items-center text-sm">
-                                                            <span className="font-medium text-gray-600 dark:text-gray-400 w-20">
-                                                                {t('phone') || 'Phone'}:
-                                                            </span>
-                                                            <span className="text-gray-900 dark:text-white">
-                                                                {product.farmer_phone}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {product.farm_location && (
-                                                        <div className="flex items-center text-sm">
-                                                            <span className="font-medium text-gray-600 dark:text-gray-400 w-20">
-                                                                {t('location') || 'Location'}:
-                                                            </span>
-                                                            <span className="text-gray-900 dark:text-white">
-                                                                {product.farm_location}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {product.farm_name && (
-                                                        <div className="flex items-center text-sm">
-                                                            <span className="font-medium text-gray-600 dark:text-gray-400 w-20">
-                                                                {t('farmName') || 'Farm Name'}:
-                                                            </span>
-                                                            <span className="text-gray-900 dark:text-white">
-                                                                {product.farm_name}
-                                                            </span>
-                                                        </div>
-                                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Related Products from Same Farmer */}
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                                More from {product.farmer_name || 'This Farmer'}
+                            </h3>
+                            {relatedProducts.length > 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    {relatedProducts.map((relatedProduct) => (
+                                        <Link
+                                            key={relatedProduct.product_id}
+                                            to={`/products/${relatedProduct.product_id}`}
+                                            className="group"
+                                        >
+                                            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                                                {relatedProduct.image ? (
+                                                    <img
+                                                        src={relatedProduct.image.startsWith('http') ? relatedProduct.image : `http://localhost:5000/${relatedProduct.image}`}
+                                                        alt={relatedProduct.product_name}
+                                                        className="w-full h-24 object-cover group-hover:scale-105 transition-transform"
+                                                        onError={(e) => {
+                                                            e.target.style.display = 'none';
+                                                            e.target.parentElement.innerHTML = '<div class="w-full h-24 bg-gray-100 dark:bg-gray-700 flex items-center justify-center"><span class="text-2xl">🌾</span></div>';
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-24 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                                                        <span className="text-2xl">🌾</span>
+                                                    </div>
+                                                )}
+                                                <div className="p-3">
+                                                    <h4 className="font-medium text-gray-900 dark:text-white text-sm truncate">{relatedProduct.product_name}</h4>
+                                                    <p className="text-emerald-600 dark:text-emerald-400 text-sm font-bold">RWF {relatedProduct.price}</p>
                                                 </div>
                                             </div>
-
-                                            {/* Contact Button */}
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm text-gray-600 dark:text-gray-400">
-                                                    {t('directFromFarm') || '100% Direct from Farm - No Middlemen'}
-                                                </span>
-                                                <button 
-                                                    onClick={handleContactFarmer}
-                                                    className="text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium"
-                                                >
-                                                    {t('contactFarmer') || 'Contact Farmer'}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
+                                        </Link>
+                                    ))}
                                 </div>
-
-                                {/* Price and Quantity */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('pricePerKg') || 'Price per kg'}</label>
-                                        <div className="text-3xl font-black text-primary-600">
-                                            ${parseFloat(product.price || 0).toFixed(2)}
-                                            <span className="text-lg text-gray-500 dark:text-gray-400">/kg</span>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('quantityKg') || 'Quantity (kg)'}</label>
-                                        <div className="flex items-center space-x-3">
-                                            <button 
-                                                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                                className="w-10 h-10 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700"
-                                            >
-                                                -
-                                            </button>
-                                            <input 
-                                                type="number" 
-                                                min="1" 
-                                                max={product.quantity}
-                                                value={quantity}
-                                                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                                                className="w-20 h-10 text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                            />
-                                            <button 
-                                                onClick={() => setQuantity(Math.min(product.quantity, quantity + 1))}
-                                                className="w-10 h-10 rounded-lg border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                            {t('available') || 'Available'}: {product.quantity} kg
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* Total Price */}
-                                <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 mb-6">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-lg font-medium text-gray-700 dark:text-gray-300">{t('totalPrice') || 'Total Price'}:</span>
-                                        <span className="text-2xl font-black text-primary-600">
-                                            ${(parseFloat(product.price || 0) * quantity).toFixed(2)}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Action Buttons */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <button
-                                        disabled={product.quantity <= 0 || addingToCart}
-                                        onClick={handleAddToCart}
-                                        className={`py-4 px-6 rounded-xl font-bold transition-all duration-200 ${
-                                            product.quantity > 0 && !addingToCart
-                                                ? 'bg-primary-600 text-white hover:bg-primary-700 transform hover:scale-105 shadow-lg hover:shadow-xl'
-                                                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                        }`}
-                                    >
-                                        {addingToCart ? (
-                                            <span>⏳ {t('adding') || 'Adding'}...</span>
-                                        ) : (
-                                            <span>🛒 {t('addToCart') || 'Add to Cart'}</span>
-                                        )}
-                                    </button>
-                                    <Link
-                                        to="/cart"
-                                        className="py-4 px-6 rounded-xl font-bold bg-green-600 text-white hover:bg-green-700 transition-colors text-center"
-                                    >
-                                        🛍️ {t('viewCart') || 'View Cart'}
-                                    </Link>
-                                    <button
-                                        onClick={handleContactFarmer}
-                                        className="py-4 px-6 rounded-xl font-bold bg-gray-800 text-white hover:bg-gray-900 transition-colors"
-                                    >
-                                        📞 {t('contactFarmer') || 'Contact Farmer'}
-                                    </button>
-                                </div>
-                            </div>
+                            ) : (
+                                <p className="text-gray-500 dark:text-gray-400 text-sm">No other products from this farmer</p>
+                            )}
                         </div>
+
                     </div>
 
-                    {/* Sidebar */}
-                    <div className="space-y-6">
-                        {/* Farmer Info */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">👨‍🌾 {t('farmerInformation') || 'Farmer Information'}</h3>
-                            <div className="flex items-center space-x-4 mb-4">
-                                {product.farmer_photo ? (
-                                    <img 
-                                        src={`http://localhost:5000/${product.farmer_photo}`} 
-                                        alt={product.farmer_name}
-                                        className="w-16 h-16 rounded-full object-cover"
-                                        onError={(e) => {
-                                            e.target.style.display = 'none';
-                                        }}
-                                    />
-                                ) : (
-                                    <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                        <span className="text-2xl">👨‍🌾</span>
-                                    </div>
-                                )}
-                                <div>
-                                    <h4 className="font-bold text-gray-900 dark:text-white">{product.farmer_name || t('localFarmer') || 'Local Farmer'}</h4>
-                                    <div className="flex items-center mt-1">
-                                        <span className="text-yellow-500">⭐</span>
-                                        <span className="text-gray-600 dark:text-gray-400 ml-1">4.8 {t('rating') || 'rating'}</span>
-                                    </div>
-                                </div>
+                    {/* Footer Stats */}
+                    <div className="mt-12 bg-gray-800 rounded-xl p-8 text-white text-center shadow-xl">
+                        <h3 className="text-2xl font-bold mb-4 text-primary-500">🌱 Supporting Local Farmers</h3>
+                        <p className="text-gray-300 mb-6">Every purchase directly supports local farmers and their families</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <div className="text-3xl font-bold mb-2 text-primary-500">🚚</div>
+                                <p className="text-gray-400">Fast Delivery</p>
                             </div>
-                            
-                            <div className="space-y-3">
-                                <div className="flex items-center text-gray-600 dark:text-gray-400">
-                                    <span className="mr-2">📍</span>
-                                    <span>{product.location || 'Kigali, Rwanda'}</span>
-                                </div>
-                                <div className="flex items-center text-gray-600 dark:text-gray-400">
-                                    <span className="mr-2">📞</span>
-                                    <span>{product.phone || '+250 788 123 456'}</span>
-                                </div>
-                                <div className="flex items-center text-gray-600 dark:text-gray-400">
-                                    <span className="mr-2">📧</span>
-                                    <span>{product.email || 'farmer@farmerjoin.rw'}</span>
-                                </div>
+                            <div>
+                                <div className="text-3xl font-bold mb-2 text-primary-500">🌿</div>
+                                <p className="text-gray-400">100% Fresh</p>
                             </div>
-                        </div>
-
-                        {/* Location */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">📍 {t('location') || 'Location'}</h3>
-                            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg h-48 flex items-center justify-center">
-                                <div className="text-center">
-                                    <div className="text-4xl mb-2">🗺️</div>
-                                    <p className="text-gray-600 dark:text-gray-400">{product.location || 'Kigali, Rwanda'}</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-500">{t('viewOnMap') || 'View on map'}</p>
-                                </div>
+                            <div>
+                                <div className="text-3xl font-bold mb-2 text-primary-500">💚</div>
+                                <p className="text-gray-400">Sustainable Farming</p>
                             </div>
-                        </div>
-
-                        {/* Contact Options */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">📞 {t('contactOptions') || 'Contact Options'}</h3>
-                            <div className="space-y-3">
-                                <button className="w-full py-3 px-4 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors font-semibold">
-                                    💬 {t('sendMessage') || 'Send Message'}
-                                </button>
-                                <button className="w-full py-3 px-4 rounded-lg bg-gray-800 text-white hover:bg-gray-900 transition-colors font-semibold">
-                                    📞 {t('callFarmer') || 'Call Farmer'}
-                                </button>
-                                <button className="w-full py-3 px-4 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-semibold">
-                                    📧 {t('sendEmail') || 'Send Email'}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Similar Products */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">🌾 {t('similarProducts') || 'Similar Products'}</h3>
-                            <div className="space-y-3">
-                                <div className="flex items-center space-x-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                                        <span className="text-xl">🍅</span>
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-medium text-gray-900 dark:text-white">Fresh Tomatoes</h4>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">$2.50/kg</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center space-x-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                                        <span className="text-xl">🥬</span>
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-medium text-gray-900 dark:text-white">Fresh Cabbage</h4>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">$1.80/kg</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center space-x-3 p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                                    <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                                        <span className="text-xl">🥕</span>
-                                    </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-medium text-gray-900 dark:text-white">Fresh Onions</h4>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">$2.20/kg</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Footer Stats */}
-                <div className="mt-12 bg-gray-800 rounded-xl p-8 text-white text-center shadow-xl">
-                    <h3 className="text-2xl font-bold mb-4 text-primary-500">🌱 Supporting Local Farmers</h3>
-                    <p className="text-gray-300 mb-6">Every purchase directly supports local farmers and their families</p>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                            <div className="text-3xl font-bold mb-2 text-primary-500">🚚</div>
-                            <p className="text-gray-400">Fast Delivery</p>
-                        </div>
-                        <div>
-                            <div className="text-3xl font-bold mb-2 text-primary-500">🌿</div>
-                            <p className="text-gray-400">100% Fresh</p>
-                        </div>
-                        <div>
-                            <div className="text-3xl font-bold mb-2 text-primary-500">💚</div>
-                            <p className="text-gray-400">Sustainable Farming</p>
                         </div>
                     </div>
                 </div>

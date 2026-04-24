@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import API from "../api";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "../hooks/useTranslation";
+import { useNewTranslation } from "../hooks/useNewTranslation";
 
 function SubAdminDashboard() {
-  const { t, changeLanguage, currentLanguage } = useTranslation();
+  const { t, changeLanguage, language } = useNewTranslation();
   const navigate = useNavigate();
   const [farmers, setFarmers] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -295,9 +295,9 @@ function SubAdminDashboard() {
               <div className="flex items-center space-x-4">
                 {/* Language Selector */}
                 <select
-                  value={currentLanguage}
+                  value={language || 'en'}
                   onChange={(e) => changeLanguage(e.target.value)}
-                  className="bg-white/10 border border-white/20 text-white px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="bg-white border border-gray-300 text-gray-900 px-4 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
                 >
                   <option value="en">English</option>
                   <option value="fr">Français</option>

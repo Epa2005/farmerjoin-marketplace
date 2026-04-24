@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import HeroSlider from "../components/HeroSlider";
 import ImageSlideshow from "../components/ImageSlideshow";
 import { useTranslation } from "../hooks/useTranslation";
+import { useCart } from "../context/CartContext";
 import API from "../api";
 
 const Home = () => {
     const { t } = useTranslation();
+    const { addToCart } = useCart();
+    const navigate = useNavigate();
     const [stats, setStats] = useState({
         users: 0,
         products: 0,
@@ -21,6 +24,9 @@ const Home = () => {
     const [uploadedImages, setUploadedImages] = useState([]);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef(null);
+    const [products, setProducts] = useState([]);
+    const [loadingProducts, setLoadingProducts] = useState(true);
+    const [categories, setCategories] = useState([]);
 
     // Agricultural photos for hero slideshow - mix of default and uploaded
     const defaultAgriPhotos = [
@@ -32,7 +38,7 @@ const Home = () => {
     
     const agriPhotos = uploadedImages.length > 0 ? [...uploadedImages, ...defaultAgriPhotos] : defaultAgriPhotos;
 
-    // Check if user is admin
+    // Check if user is admin and fetch products
     useEffect(() => {
         const token = localStorage.getItem('token');
         const userRole = localStorage.getItem('userRole');
@@ -40,7 +46,42 @@ const Home = () => {
             setIsAdmin(true);
             fetchUploadedImages();
         }
+        fetchProducts();
+        fetchStats();
     }, []);
+
+    // Fetch products from backend
+    const fetchProducts = async () => {
+        try {
+            const response = await API.get('/products');
+            setProducts(response.data);
+            
+            // Extract unique categories
+            const uniqueCategories = [...new Set(response.data.map(p => p.category))];
+            setCategories(uniqueCategories);
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        } finally {
+            setLoadingProducts(false);
+        }
+    };
+
+    // Fetch statistics from backend
+    const fetchStats = async () => {
+        try {
+            const response = await API.get('/users');
+            if (response.data) {
+                setStats({
+                    users: response.data.totalUsers || 0,
+                    products: response.data.totalProducts || 0,
+                    markets: 50,
+                    satisfaction: 98
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching stats:', error);
+        }
+    };
     
     // Fetch uploaded images
     const fetchUploadedImages = async () => {
@@ -110,18 +151,6 @@ const Home = () => {
         }
     };
 
-    // Animated counter effect
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setStats({
-                users: 5000,
-                products: 2000,
-                markets: 50,
-                satisfaction: 98
-            });
-        }, 500);
-        return () => clearTimeout(timer);
-    }, []);
 
     // Scroll progress indicator
     useEffect(() => {
@@ -268,35 +297,6 @@ const Home = () => {
                 
                 {/* Enhanced Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60"></div>
-                
-                {/* Modern Animated Background Elements */}
-                <div className="absolute inset-0 overflow-hidden">
-                    {/* Floating Gradient Orbs */}
-                    <div className="absolute top-10 left-10 w-96 h-96 bg-gradient-to-br from-emerald-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse"></div>
-                    <div className="absolute bottom-10 right-10 w-[28rem] h-[28rem] bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-indigo-400/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '0.5s' }}></div>
-                    
-                    {/* Floating Geometric Shapes */}
-                    <div className="absolute top-1/4 left-1/4 w-24 h-24 border-2 border-white/10 rounded-xl animate-bounce backdrop-blur-sm" style={{ animationDelay: '2s' }}></div>
-                    <div className="absolute bottom-1/4 right-1/4 w-20 h-20 border-2 border-white/10 rounded-full animate-spin backdrop-blur-sm" style={{ animationDuration: '10s', animationDelay: '3s' }}></div>
-                    <div className="absolute top-3/4 left-3/4 w-16 h-16 border-2 border-white/10 rotate-45 animate-pulse backdrop-blur-sm" style={{ animationDelay: '4s' }}></div>
-                    
-                    {/* Particle Effects */}
-                    <div className="absolute inset-0">
-                        {[...Array(20)].map((_, i) => (
-                            <div
-                                key={i}
-                                className="absolute w-1 h-1 bg-white/30 rounded-full animate-pulse"
-                                style={{
-                                    top: `${Math.random() * 100}%`,
-                                    left: `${Math.random() * 100}%`,
-                                    animationDelay: `${Math.random() * 5}s`,
-                                    animationDuration: `${3 + Math.random() * 4}s`
-                                }}
-                            />
-                        ))}
-                    </div>
-                </div>
 
                 {/* Hero Content */}
                 <div className="relative z-10 text-center text-white px-4 max-w-7xl mx-auto">
@@ -380,643 +380,254 @@ const Home = () => {
                 </div>
             </section>
 
-            {/* 2️⃣ MODERN STATISTICS SECTION WITH GLASSMORPHISM */}
-            <section id="stats" className="py-20 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 animate-on-scroll">
+            {/* 2️⃣ FEATURED PRODUCTS SECTION */}
+            <section id="products" className="py-16 bg-gray-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     {/* Section Header */}
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-                            <span className="bg-gradient-to-r from-emerald-600 to-cyan-600 bg-clip-text text-transparent">
-                                {t('impactAtGlance')}
-                            </span>
-                        </h2>
-                        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                            {t('joinThousandsTransforming')}
-                        </p>
-                    </div>
-                    
-                    {/* Enhanced Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {[
-                            { 
-                                value: stats.users, 
-                                label: t('farmersCount'), 
-                                suffix: '+', 
-                                icon: '👥',
-                                color: 'from-blue-500 to-cyan-500',
-                                bgGradient: 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20',
-                                description: t('activeFarmers')
-                            },
-                            { 
-                                value: stats.products, 
-                                label: t('productsCount'), 
-                                suffix: '+', 
-                                icon: '🌾',
-                                color: 'from-emerald-500 to-teal-500',
-                                bgGradient: 'from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20',
-                                description: t('productsListed')
-                            },
-                            { 
-                                value: stats.markets, 
-                                label: t('marketsCount'), 
-                                suffix: '+', 
-                                icon: '🏪',
-                                color: 'from-purple-500 to-pink-500',
-                                bgGradient: 'from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20',
-                                description: t('marketConnections')
-                            },
-                            { 
-                                value: stats.satisfaction, 
-                                label: t('satisfactionRate'), 
-                                suffix: '%', 
-                                icon: '⭐',
-                                color: 'from-orange-500 to-red-500',
-                                bgGradient: 'from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20',
-                                description: t('satisfactionRateValue')
-                            }
-                        ].map((stat, index) => (
-                            <div key={index} className="group">
-                                <div className={`relative bg-gradient-to-br ${stat.bgGradient} backdrop-blur-md p-8 rounded-3xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-500 border border-white/20 dark:border-gray-700/50 overflow-hidden`}>
-                                    {/* Background Pattern */}
-                                    <div className="absolute inset-0 opacity-10">
-                                        <div className={`absolute inset-0 bg-gradient-to-br ${stat.color}`}></div>
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full -mr-16 -mt-16"></div>
-                                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/20 rounded-full -ml-12 -mb-12"></div>
-                                    </div>
-                                    
-                                    {/* Icon */}
-                                    <div className={`relative w-16 h-16 bg-gradient-to-br ${stat.color} rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-12 transition-transform duration-300 shadow-lg`}>
-                                        <span className="text-2xl">{stat.icon}</span>
-                                    </div>
-                                    
-                                    {/* Value */}
-                                    <div className={`relative text-4xl md:text-5xl font-black bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-2 ${isVisible['stats'] ? 'animate-counter' : ''}`}>
-                                        {stat.value}{stat.suffix}
-                                    </div>
-                                    
-                                    {/* Label */}
-                                    <div className="relative text-gray-700 dark:text-gray-300 font-semibold text-lg mb-1">
-                                        {stat.label}
-                                    </div>
-                                    
-                                    {/* Description */}
-                                    <div className="relative text-gray-500 dark:text-gray-400 text-sm">
-                                        {stat.description}
-                                    </div>
-                                    
-                                    {/* Hover Effect Overlay */}
-                                    <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-3xl`}></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    
-                    {/* Additional Stats Bar */}
-                    <div className="mt-16 bg-gradient-to-r from-emerald-500 to-cyan-600 rounded-3xl p-8 text-white shadow-2xl">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-                            <div>
-                                <div className="text-3xl font-bold mb-2">24/7</div>
-                                <div className="text-emerald-100">{t('supportAvailable')}</div>
-                            </div>
-                            <div>
-                                <div className="text-3xl font-bold mb-2">50+</div>
-                                <div className="text-emerald-100">{t('regionsCovered')}</div>
-                            </div>
-                            <div>
-                                <div className="text-3xl font-bold mb-2">100%</div>
-                                <div className="text-emerald-100">{t('securePlatformValue')}</div>
-                            </div>
+                    <div className="flex justify-between items-end mb-8">
+                        <div>
+                            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                                Featured Products
+                            </h2>
+                            <p className="text-gray-600">Fresh from local farmers</p>
                         </div>
+                        <Link
+                            to="/products"
+                            className="hidden sm:flex items-center text-emerald-600 hover:text-emerald-700 font-medium"
+                        >
+                            View All
+                            <svg className="w-5 h-5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                        </Link>
+                    </div>
+
+                    {/* Products Grid */}
+                    {loadingProducts ? (
+                        <div className="text-center py-20">
+                            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500"></div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {products.slice(0, 8).map((product) => (
+                                <Link key={product.product_id} to={`/products/${product.product_id}`} className="group">
+                                    <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
+                                        {/* Product Image */}
+                                        <div className="relative aspect-square bg-gray-100">
+                                            {product.image ? (
+                                                <img
+                                                    src={product.image.startsWith('http') ? product.image : `http://localhost:5000/${product.image}`}
+                                                    alt={product.product_name}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-gradient-to-br from-emerald-100 to-cyan-100 flex items-center justify-center">
+                                                    <span className="text-4xl">🌾</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Product Info */}
+                                        <div className="p-4">
+                                            <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2">
+                                                {product.product_name}
+                                            </h3>
+                                            <p className="text-xs text-gray-500 mb-2">{product.category}</p>
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-bold text-emerald-600">RWF {product.price}</span>
+                                                <button
+                                                    onClick={async (e) => {
+                                                        e.preventDefault();
+                                                        const token = localStorage.getItem('token');
+                                                        if (!token) {
+                                                            navigate('/login');
+                                                        } else {
+                                                            try {
+                                                                await addToCart(product, 1);
+                                                            } catch (error) {
+                                                                console.error(error);
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-colors"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Mobile View All Button */}
+                    <div className="sm:hidden text-center mt-6">
+                        <Link
+                            to="/products"
+                            className="inline-block px-6 py-3 bg-emerald-600 text-white rounded-lg font-medium"
+                        >
+                            View All Products
+                        </Link>
                     </div>
                 </div>
             </section>
 
-            {/* 3️⃣ MODERN PROBLEM → SOLUTION SECTION */}
-            <section id="problem-solution" className="py-20 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 animate-on-scroll">
+            {/* 3️⃣ CATEGORIES SECTION */}
+            <section className="py-16 bg-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    {/* Section Header */}
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-                            <span className="bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
-                                {t('challengeSolution')}
-                            </span>
-                        </h2>
-                        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                            {t('transformingChallenges')}
-                        </p>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-8">Shop by Category</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {categories.slice(0, 8).map((category, index) => (
+                            <Link
+                                key={index}
+                                to={`/products?category=${encodeURIComponent(category)}`}
+                                className="group relative aspect-square rounded-xl overflow-hidden"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-cyan-500 group-hover:from-emerald-500 group-hover:to-cyan-600 transition-all duration-300"></div>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
+                                    <span className="text-3xl mb-2">
+                                        {index === 0 ? '🥬' : index === 1 ? '🍎' : index === 2 ? '🥕' : index === 3 ? '🍌' : index === 4 ? '🥔' : index === 5 ? '🌽' : index === 6 ? '🍇' : '🍊'}
+                                    </span>
+                                    <span className="font-medium text-center">{category}</span>
+                                </div>
+                            </Link>
+                        ))}
                     </div>
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                        {/* Problem */}
-                        <div className="relative">
-                            <div className="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-red-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-2xl">
-                                <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </div>
-                            <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-2xl border border-red-100 dark:border-red-900/30">
-                                <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
-                                    {t('theProblem')}
-                                </h3>
-                                <div className="space-y-4">
-                                    <div className="flex items-start space-x-4 group">
-                                        <div className="w-3 h-3 bg-red-500 rounded-full mt-2 flex-shrink-0 group-hover:scale-125 transition-transform"></div>
-                                        <div>
-                                            <p className="text-gray-700 dark:text-gray-300 font-medium">
-                                                {t('farmersLoseProfits')}
-                                            </p>
-                                            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t('middlemenTake')}</p>
-                                        </div>
+                </div>
+            </section>
+
+            {/* 4️⃣ SPECIAL OFFERS BANNER */}
+            <section className="py-16 bg-gradient-to-r from-emerald-600 to-cyan-600">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex flex-col md:flex-row items-center justify-between text-white">
+                        <div className="mb-6 md:mb-0">
+                            <h2 className="text-3xl font-bold mb-2">Special Offer!</h2>
+                            <p className="text-emerald-100">Get 20% off on your first order</p>
+                        </div>
+                        <Link
+                            to="/products"
+                            className="px-8 py-4 bg-white text-emerald-600 rounded-xl font-bold hover:bg-emerald-50 transition-colors"
+                        >
+                            Shop Now
+                        </Link>
+                    </div>
+                </div>
+            </section>
+
+            {/* 5️⃣ NEW ARRIVALS */}
+            <section className="py-16 bg-gray-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-8">New Arrivals</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {products.slice(8, 12).map((product) => (
+                            <Link key={product.product_id} to={`/products/${product.product_id}`} className="group">
+                                <div className="bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
+                                    <div className="relative aspect-square bg-gray-100">
+                                        {product.image ? (
+                                            <img
+                                                src={product.image.startsWith('http') ? product.image : `http://localhost:5000/${product.image}`}
+                                                alt={product.product_name}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full bg-gradient-to-br from-emerald-100 to-cyan-100 flex items-center justify-center">
+                                                <span className="text-4xl">🌾</span>
+                                            </div>
+                                        )}
+                                        <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">NEW</span>
                                     </div>
-                                    <div className="flex items-start space-x-4 group">
-                                        <div className="w-3 h-3 bg-red-500 rounded-full mt-2 flex-shrink-0 group-hover:scale-125 transition-transform"></div>
-                                        <div>
-                                            <p className="text-gray-700 dark:text-gray-300 font-medium">
-                                                {t('limitedMarketAccess')}
-                                            </p>
-                                            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t('restrictedLocalMarkets')}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start space-x-4 group">
-                                        <div className="w-3 h-3 bg-red-500 rounded-full mt-2 flex-shrink-0 group-hover:scale-125 transition-transform"></div>
-                                        <div>
-                                            <p className="text-gray-700 dark:text-gray-300 font-medium">
-                                                {t('priceVolatility')}
-                                            </p>
-                                            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t('unpredictableMarketPrices')}</p>
-                                        </div>
+                                    <div className="p-4">
+                                        <h3 className="font-medium text-gray-900 text-sm mb-1 line-clamp-2">
+                                            {product.product_name}
+                                        </h3>
+                                        <span className="font-bold text-emerald-600">RWF {product.price}</span>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            </section>
 
-                        {/* Solution */}
-                        <div className="relative">
-                            <div className="absolute -top-6 -left-6 w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center shadow-2xl">
-                                <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {/* 6️⃣ WHY CHOOSE US */}
+            <section className="py-16 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Why Choose FarmerJoin?</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             </div>
-                            <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-2xl border border-emerald-100 dark:border-emerald-900/30">
-                                <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
-                                    {t('theSolution')}
-                                </h3>
-                                <div className="space-y-4">
-                                    <div className="flex items-start space-x-4 group">
-                                        <div className="w-3 h-3 bg-emerald-500 rounded-full mt-2 flex-shrink-0 group-hover:scale-125 transition-transform"></div>
-                                        <div>
-                                            <p className="text-gray-700 dark:text-gray-300 font-medium">
-                                                {t('directFarmerConnections')}
-                                            </p>
-                                            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t('connectDirectlyBuyers')}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start space-x-4 group">
-                                        <div className="w-3 h-3 bg-emerald-500 rounded-full mt-2 flex-shrink-0 group-hover:scale-125 transition-transform"></div>
-                                        <div>
-                                            <p className="text-gray-700 dark:text-gray-300 font-medium">
-                                                {t('transparentPricing')}
-                                            </p>
-                                            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t('fairTransparentPricing')}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-start space-x-4 group">
-                                        <div className="w-3 h-3 bg-emerald-500 rounded-full mt-2 flex-shrink-0 group-hover:scale-125 transition-transform"></div>
-                                        <div>
-                                            <p className="text-gray-700 dark:text-gray-300 font-medium">
-                                                {t('digitalMarketplace')}
-                                            </p>
-                                            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{t('globalMarketAccess')}</p>
-                                        </div>
-                                    </div>
-                                </div>
+                            <h3 className="font-bold text-gray-900 mb-2">Direct from Farmers</h3>
+                            <p className="text-gray-600 text-sm">Buy directly from local farmers, no middlemen involved</p>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2m0 0a5 5 0 017.54-.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                                </svg>
                             </div>
+                            <h3 className="font-bold text-gray-900 mb-2">Fair Prices</h3>
+                            <p className="text-gray-600 text-sm">Get the best prices with transparent pricing</p>
+                        </div>
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                            </div>
+                            <h3 className="font-bold text-gray-900 mb-2">Fast Delivery</h3>
+                            <p className="text-gray-600 text-sm">Quick and reliable delivery to your doorstep</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* 4️⃣ MODERN FEATURES SECTION */}
-            <section id="features" className="py-20 bg-white dark:bg-gray-900 animate-on-scroll">
+            {/* 7️⃣ FOOTER */}
+            <footer className="bg-gray-900 text-white py-12">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    {/* Section Header */}
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-                            <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                {t('powerfulFeatures')}
-                            </span>
-                        </h2>
-                        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                            {t('everythingYouNeed')}
-                        </p>
-                    </div>
-
-                    {/* Enhanced Features Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {[
-                            {
-                                icon: '📱',
-                                title: t('mobileFirst'),
-                                description: t('mobileFirstDescription'),
-                                color: 'from-blue-500 to-cyan-500',
-                                bgGradient: 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20',
-                                detail: t('optimizedForAllDevices')
-                            },
-                            {
-                                icon: '🔒',
-                                title: t('securePayments'),
-                                description: t('securePaymentsDescription'),
-                                color: 'from-green-500 to-emerald-500',
-                                bgGradient: 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
-                                detail: t('safeAndSecureTransactions')
-                            },
-                            {
-                                icon: '📊',
-                                title: t('realTimeAnalytics'),
-                                description: t('realTimeAnalyticsDescription'),
-                                color: 'from-purple-500 to-pink-500',
-                                bgGradient: 'from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20',
-                                detail: t('dataDrivenInsights')
-                            },
-                            {
-                                icon: '💬',
-                                title: t('directMessaging'),
-                                description: t('directMessagingDescription'),
-                                color: 'from-orange-500 to-red-500',
-                                bgGradient: 'from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20',
-                                detail: t('instantCommunication')
-                            },
-                            {
-                                icon: '🌍',
-                                title: t('globalReach'),
-                                description: t('connectWorldwide'),
-                                color: 'from-indigo-500 to-blue-500',
-                                bgGradient: 'from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20',
-                                detail: t('expandMarket')
-                            },
-                            {
-                                icon: '🚚',
-                                title: t('logisticsSupport'),
-                                description: t('integratedShipping'),
-                                color: 'from-teal-500 to-green-500',
-                                bgGradient: 'from-teal-50 to-green-50 dark:from-teal-900/20 dark:to-green-900/20',
-                                detail: t('seamlessDelivery')
-                            },
-                            {
-                                icon: '📈',
-                                title: t('marketInsights'),
-                                description: t('realTimeTrends'),
-                                color: 'from-yellow-500 to-orange-500',
-                                bgGradient: 'from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20',
-                                detail: t('smartDecisions')
-                            },
-                            {
-                                icon: '🤝',
-                                title: t('communitySupport'),
-                                description: t('thrivingAgricultural'),
-                                color: 'from-pink-500 to-rose-500',
-                                bgGradient: 'from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20',
-                                detail: t('growTogether')
-                            }
-                        ].map((feature, index) => (
-                            <div key={index} className="group">
-                                <div className={`relative bg-gradient-to-br ${feature.bgGradient} backdrop-blur-md p-8 rounded-3xl shadow-lg hover:shadow-2xl transform hover:scale-105 transition-all duration-500 border border-white/20 dark:border-gray-700/50 h-full`}>
-                                    {/* Background Pattern */}
-                                    <div className="absolute inset-0 opacity-5">
-                                        <div className={`absolute inset-0 bg-gradient-to-br ${feature.color}`}></div>
-                                    </div>
-                                    
-                                    {/* Icon */}
-                                    <div className={`relative w-16 h-16 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center mb-6 group-hover:rotate-12 transition-transform duration-300 shadow-lg`}>
-                                        <span className="text-2xl">{feature.icon}</span>
-                                    </div>
-                                    
-                                    {/* Title */}
-                                    <h3 className="relative text-xl font-bold text-gray-900 dark:text-white mb-3">
-                                        {feature.title}
-                                    </h3>
-                                    
-                                    {/* Description */}
-                                    <p className="relative text-gray-600 dark:text-gray-300 leading-relaxed mb-3">
-                                        {feature.description}
-                                    </p>
-                                    
-                                    {/* Detail */}
-                                    <div className="relative">
-                                        <span className={`text-sm font-medium bg-gradient-to-r ${feature.color} bg-clip-text text-transparent`}>
-                                            {feature.detail}
-                                        </span>
-                                    </div>
-                                    
-                                    {/* Hover Effect */}
-                                    <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-3xl`}></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* 5️⃣ MODERN PREVIEW / DEMO SECTION */}
-            <section id="preview" className="py-20 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 animate-on-scroll">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    {/* Section Header */}
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-                            <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                                {t('seeItInAction')}
-                            </span>
-                        </h2>
-                        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                            {t('experienceFarmerJoin')}
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                        {/* Benefits Section */}
-                        <div className="bg-white dark:bg-gray-800 p-10 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700">
-                            <div className="flex items-center mb-8">
-                                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mr-4">
-                                    <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                                        {t('keyBenefits')}
-                                    </h3>
-                                    <p className="text-gray-600 dark:text-gray-400">{t('transformFarmingBusiness')}</p>
-                                </div>
-                            </div>
-                            
-                            <div className="space-y-6">
-                                {[
-                                    { benefit: t('increaseFarmerIncome'), icon: '📈', detail: t('upTo40Higher') },
-                                    { benefit: t('reducePostHarvestLosses'), icon: '🌾', detail: t('smartStorageSolutions') },
-                                    { benefit: t('accessNewMarkets'), icon: '🌍', detail: t('globalMarketplaceAccess') },
-                                    { benefit: t('realTimeAnalytics'), icon: '📊', detail: t('dataDrivenDecisions') },
-                                    { benefit: t('securePayments'), icon: '🔒', detail: t('safeTransactions') }
-                                ].map((item, index) => (
-                                    <div key={index} className="flex items-start space-x-4 group hover:bg-gray-50 dark:hover:bg-gray-700 p-3 rounded-xl transition-all duration-300">
-                                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                                            <span className="text-xl">{item.icon}</span>
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-gray-900 dark:text-white font-semibold mb-1">{item.benefit}</p>
-                                            <p className="text-gray-600 dark:text-gray-400 text-sm">{item.detail}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                        <div>
+                            <h3 className="font-bold text-lg mb-4">FarmerJoin</h3>
+                            <p className="text-gray-400 text-sm">Connecting farmers with buyers for a sustainable agricultural future.</p>
                         </div>
-
-                        {/* CTA Section */}
-                        <div className="relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-3xl transform rotate-3"></div>
-                            <div className="relative bg-gradient-to-br from-emerald-500 to-teal-600 p-10 rounded-3xl shadow-2xl text-white border border-emerald-400/20">
-                                <div className="mb-8">
-                                    <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6">
-                                        <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                        </svg>
-                                    </div>
-                                    <h3 className="text-3xl font-bold mb-4">
-                                        {t('startYourJourney')}
-                                    </h3>
-                                    <p className="text-emerald-100 text-lg mb-8">
-                                        {t('joinThousands')}
-                                    </p>
-                                </div>
-                                
-                                <div className="space-y-4">
-                                    <Link
-                                        to="/register"
-                                        className="block w-full bg-white text-emerald-600 px-8 py-4 rounded-2xl font-bold text-center hover:bg-emerald-50 transform hover:scale-105 transition-all duration-300 shadow-lg"
-                                    >
-                                        {t('tryDemoNow')}
-                                    </Link>
-                                    <Link
-                                        to="/about"
-                                        className="block w-full bg-white/20 backdrop-blur-sm text-white px-8 py-4 rounded-2xl font-bold text-center hover:bg-white/30 transition-all duration-300 border border-white/20"
-                                    >
-                                        {t('learnMoreButton')}
-                                    </Link>
-                                </div>
-                                
-                                {/* Trust Badges */}
-                                <div className="mt-8 pt-8 border-t border-emerald-400/20">
-                                    <div className="flex justify-center space-x-8">
-                                        <div className="text-center">
-                                            <div className="text-2xl font-bold">{t('activeFarmers')}</div>
-                                            <div className="text-emerald-100 text-sm">{t('activeFarmers')}</div>
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="text-2xl font-bold">{t('userRating')}</div>
-                                            <div className="text-emerald-100 text-sm">{t('userRating')}</div>
-                                        </div>
-                                        <div className="text-center">
-                                            <div className="text-2xl font-bold">{t('support')}</div>
-                                            <div className="text-emerald-100 text-sm">{t('support')}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div>
+                            <h4 className="font-semibold mb-4">Quick Links</h4>
+                            <ul className="space-y-2 text-sm text-gray-400">
+                                <li><Link to="/about" className="hover:text-white">About Us</Link></li>
+                                <li><Link to="/products" className="hover:text-white">Products</Link></li>
+                                <li><Link to="/dashboard" className="hover:text-white">Dashboard</Link></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold mb-4">Support</h4>
+                            <ul className="space-y-2 text-sm text-gray-400">
+                                <li><Link to="#" className="hover:text-white">Help Center</Link></li>
+                                <li><Link to="#" className="hover:text-white">Contact Us</Link></li>
+                                <li><Link to="#" className="hover:text-white">FAQs</Link></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold mb-4">Contact</h4>
+                            <ul className="space-y-2 text-sm text-gray-400">
+                                <li>info@farmerjoin.rw</li>
+                                <li>+250 788 123 456</li>
+                                <li>Kigali, Rwanda</li>
+                            </ul>
                         </div>
                     </div>
-                </div>
-            </section>
-
-            {/* 6️⃣ MODERN TESTIMONIALS SECTION */}
-            <section id="testimonials" className="py-20 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 animate-on-scroll">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    {/* Section Header */}
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-                            <span className="bg-gradient-to-r from-yellow-500 to-orange-500 bg-clip-text text-transparent">
-                                {t('trustedByFarmers')}
-                            </span>
-                        </h2>
-                        <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-                            {t('realStoriesFromRealUsers')}
-                        </p>
-                    </div>
-
-                    {/* Enhanced Testimonials Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {[
-                            {
-                                name: t('jeanMugisha'),
-                                role: t('coffeeFarmer'),
-                                location: t('northernProvince'),
-                                image: '/images/farmer1.jpg',
-                                testimonial: t('jeanTestimonial'),
-                                rating: 5,
-                                achievement: t('increasedIncome'),
-                                crop: t('coffee')
-                            },
-                            {
-                                name: t('graceUwimana'),
-                                role: t('vegetableSeller'),
-                                location: t('kigali'),
-                                image: '/images/buyer1.jpg',
-                                testimonial: t('graceTestimonial'),
-                                rating: 5,
-                                achievement: t('expandedNewMarkets'),
-                                crop: t('vegetables')
-                            },
-                            {
-                                name: t('emmanuelNiyonzima'),
-                                role: t('cooperativeLeader'),
-                                location: t('easternProvince'),
-                                image: '/images/coop1.jpg',
-                                testimonial: t('emmanuelTestimonial'),
-                                rating: 5,
-                                achievement: t('reducedLosses'),
-                                crop: t('mixedCrops')
-                            }
-                        ].map((testimonial, index) => (
-                            <div key={index} className="group">
-                                <div className="relative bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-500 border border-gray-100 dark:border-gray-700 h-full">
-                                    {/* Background Pattern */}
-                                    <div className="absolute inset-0 opacity-5">
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-full -mr-16 -mt-16"></div>
-                                    </div>
-                                    
-                                    {/* Rating */}
-                                    <div className="flex mb-6">
-                                        {[...Array(testimonial.rating)].map((_, i) => (
-                                            <svg key={i} className="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                            </svg>
-                                        ))}
-                                    </div>
-                                    
-                                    {/* Profile */}
-                                    <div className="flex items-center mb-6">
-                                        <div className="relative">
-                                            <img 
-                                                src={testimonial.image} 
-                                                alt={testimonial.name}
-                                                className="w-16 h-16 rounded-full object-cover border-4 border-white dark:border-gray-700 shadow-lg"
-                                                onError={(e) => {
-                                                    e.target.src = `https://ui-avatars.com/api/?name=${testimonial.name}&background=10b981&color=fff`;
-                                                }}
-                                            />
-                                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center border-2 border-white dark:border-gray-800">
-                                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                </svg>
-                                            </div>
-                                        </div>
-                                        <div className="ml-4">
-                                            <h4 className="font-bold text-gray-900 dark:text-white text-lg">{testimonial.name}</h4>
-                                            <span className="text-sm text-gray-500 dark:text-gray-400">{testimonial.role}</span>
-                                        <p className="text-xs text-gray-500 dark:text-gray-500">{testimonial.location}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Achievement Badge */}
-                                    <div className="inline-block bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-900/20 dark:to-teal-900/20 px-3 py-1 rounded-full mb-4">
-                                        <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-                                            {testimonial.achievement}
-                                        </span>
-                                    </div>
-                                    
-                                    {/* Testimonial */}
-                                    <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg mb-6">
-                                        "{testimonial.testimonial}"
-                                    </p>
-                                    
-                                    {/* Crop Type */}
-                                    <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
-                                        <span className="text-sm text-gray-500 dark:text-gray-400">{t('specializesIn')}</span>
-                                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{testimonial.crop}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    
-                    {/* Additional Testimonial Stats */}
-                    <div className="mt-16 text-center">
-                        <div className="inline-flex items-center space-x-8 bg-white dark:bg-gray-800 px-8 py-4 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700">
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-gray-900 dark:text-white">98%</div>
-                                <div className="text-sm text-gray-600 dark:text-gray-400">{t('satisfactionRatePercent')}</div>
-                            </div>
-                            <div className="w-px h-8 bg-gray-200 dark:bg-gray-700"></div>
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-gray-900 dark:text-white">500+</div>
-                                <div className="text-sm text-gray-600 dark:text-gray-400">{t('successStories')}</div>
-                            </div>
-                            <div className="w-px h-8 bg-gray-200 dark:bg-gray-700"></div>
-                            <div className="text-center">
-                                <div className="text-2xl font-bold text-gray-900 dark:text-white">4.9★</div>
-                                <div className="text-sm text-gray-600 dark:text-gray-400">{t('averageRating')}</div>
-                            </div>
-                        </div>
+                    <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
+                        <p>&copy; 2024 FarmerJoin. All rights reserved.</p>
                     </div>
                 </div>
-            </section>
-
-            {/* Custom Styles */}
-            <style jsx={true}>{`
-                @keyframes fade-in-up {
-                    from {
-                        opacity: 0;
-                        transform: translateY(30px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-                
-                @keyframes counter {
-                    from {
-                        opacity: 0;
-                        transform: scale(0.5);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: scale(1);
-                    }
-                }
-                
-                .animate-fade-in-up {
-                    animation: fade-in-up 0.8s ease-out forwards;
-                }
-                
-                .animate-fade-in-up.delay-200 {
-                    animation-delay: 0.2s;
-                }
-                
-                .animate-fade-in-up.delay-400 {
-                    animation-delay: 0.4s;
-                }
-                
-                .animate-counter {
-                    animation: counter 1s ease-out forwards;
-                }
-                
-                .delay-1000 {
-                    animation-delay: 1s;
-                }
-                
-                .delay-2000 {
-                    animation-delay: 2s;
-                }
-                
-                .delay-3000 {
-                    animation-delay: 3s;
-                }
-                
-                .delay-4000 {
-                    animation-delay: 4s;
-                }
-            `}</style>
+            </footer>
         </div>
     );
-};
+}
 
 export default Home;

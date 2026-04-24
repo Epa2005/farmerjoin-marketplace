@@ -28,6 +28,8 @@ import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import AIDashboard from "./pages/AIDashboard";
+import EditUserProfile from "./pages/EditUserProfile";
 
 // Components
 import Navbar from "./components/Navbar";
@@ -126,6 +128,16 @@ function App() {
               }
             />
 
+            {/* AI Dashboard (protected for authenticated users) */}
+            <Route
+              path="/ai-dashboard"
+              element={
+                <ProtectedRoute>
+                  <AIDashboard />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Edit Product (protected for farmers) */}
             <Route
               path="/edit-product/:productId"
@@ -187,12 +199,15 @@ function App() {
               }
             />
 
-            {/* Product Detail (protected for all authenticated users) */}
+            {/* Product Detail (public - visitors can view without login) */}
+            <Route path="/products/:productId" element={<ProductDetail />} />
+
+            {/* Edit User Profile (protected for all authenticated users) */}
             <Route
-              path="/products/:productId"
+              path="/edit-profile"
               element={
                 <ProtectedRoute>
-                  <ProductDetail />
+                  <EditUserProfile />
                 </ProtectedRoute>
               }
             />

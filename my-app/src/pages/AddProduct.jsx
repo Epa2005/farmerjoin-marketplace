@@ -5,12 +5,12 @@ import { useTranslation } from "../hooks/useTranslation";
 
 function AddProduct() {
     const navigate = useNavigate();
-    const { t } = useTranslation();
+    const { t, language, changeLanguage } = useTranslation();
     const fileInputRef = useRef(null);
     
     const [product, setProduct] = useState({
         product_name: "",
-        category: "Grains",
+        category: "grains",
         price: "",
         quantity: ""
     });
@@ -74,7 +74,7 @@ function AddProduct() {
         // Reset form for new product
         setProduct({
             product_name: "",
-            category: "Grains",
+            category: "grains",
             price: "",
             quantity: ""
         });
@@ -111,10 +111,10 @@ function AddProduct() {
         try {
             // Create FormData for file upload
             const formData = new FormData();
-            formData.append('product_name', product.product_name);
-            formData.append('category', product.category);
-            formData.append('price', product.price);
-            formData.append('quantity', product.quantity);
+            formData.append('product_name', product.product_name.trim());
+            formData.append('category', (product.category || 'grains').toLowerCase());
+            formData.append('price', String(Number(product.price)));
+            formData.append('quantity', String(parseInt(product.quantity, 10)));
             
             // Don't send price_per_quantity - backend might not support it
             // if (product.price_per_quantity) {
@@ -135,23 +135,23 @@ function AddProduct() {
 
             const response = await API.post("/farmer/products", formData, {
                 headers: {
-                    'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${token}`
                 }
             });
 
             console.log('Product added successfully:', response.data);
+            const createdProduct = response?.data?.product || response?.data;
             setSuccess(true);
             setLoading(false);
-            setAddedProduct(response.data);
+            setAddedProduct(createdProduct);
             
             // Update stock display immediately with the newly added product
-            if (response.data) {
-                console.log('Adding product to stock display:', response.data);
+            if (createdProduct) {
+                console.log('Adding product to stock display:', createdProduct);
                 console.log('Current stock before update:', farmerStock);
                 setFarmerStock(prev => {
-                    console.log('Updating stock with new product:', response.data);
-                    const newStock = [response.data, ...prev];
+                    console.log('Updating stock with new product:', createdProduct);
+                    const newStock = [createdProduct, ...prev];
                     console.log('New stock after update:', newStock);
                     return newStock;
                 });
@@ -166,7 +166,11 @@ function AddProduct() {
             console.error('Error adding product:', err);
             console.error('Error response:', err?.response);
             console.error('Error data:', err?.response?.data);
-            setError(err?.response?.data?.message || err?.message || "Failed to add product");
+            const backendMessage =
+                err?.response?.data?.message ||
+                err?.response?.data?.error ||
+                err?.response?.data?.details;
+            setError(backendMessage || err?.message || "Failed to add product");
             setLoading(false);
         }
     };
@@ -255,19 +259,40 @@ function AddProduct() {
                             <div className="flex justify-between items-center mb-8">
                                 <div>
                                     <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                                        Add New Product
+                                        {t('addProduct', 'Add New Product')}
                                     </h1>
                                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                        Fill in the details below to add a product to your inventory
+                                        {t('fillProductDetails', 'Fill in the details below to add a product to your inventory')}
                                     </p>
                                 </div>
-                                <Link
-                                    to="/farmer-dashboard"
-                                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-300 hover:scale-105"
-                                >
-                                    <span>arrow-left</span>
-                                    Back to Dashboard
-                                </Link>
+                                <div className="flex items-center gap-3">
+                                    {/* Language Selector */}
+                                    <div className="relative">
+                                        <select
+                                            value={language}
+                                            onChange={(e) => changeLanguage(e.target.value)}
+                                            className="appearance-none bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-xl px-4 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                                        >
+                                            <option value="en">🇬🇧 EN</option>
+                                            <option value="rw">🇷 RW</option>
+                                            <option value="fr">🇫🇷 FR</option>
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <Link
+                                        to="/farmer-dashboard"
+                                        className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-300 hover:scale-105"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                        </svg>
+                                        {t('backToDashboard', 'Back to Dashboard')}
+                                    </Link>
+                                </div>
                             </div>
 
                             {success && (
@@ -348,7 +373,7 @@ function AddProduct() {
                                             className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 dark:bg-gray-700 dark:text-white transition-all duration-300"
                                             placeholder="Enter price"
                                         />
-                                        <span className="absolute right-3 top-3 text-gray-400">dollar-sign</span>
+                                        <span className="absolute right-3 top-3 text-gray-400">frw</span>
                                     </div>
                                 </div>
 
@@ -421,7 +446,7 @@ function AddProduct() {
                                 {/* Submit Button */}
                                 <div className="flex justify-end space-x-4 pt-4">
                                     <Link
-                                        to="/farmer-dashboard"
+                                        to="/dashboard"
                                         className="px-6 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all duration-300 hover:scale-105 font-medium"
                                     >
                                         Cancel
@@ -438,8 +463,8 @@ function AddProduct() {
                                             </>
                                         ) : (
                                             <>
-                                                <span>plus-circle</span>
-                                                Add Product
+                                                <span>Add Product</span>
+                                                
                                             </>
                                         )}
                                     </button>
@@ -513,119 +538,14 @@ function AddProduct() {
                                     <span>plus</span>
                                     Continue Adding Products
                                 </button>
-                                <button
-                                    onClick={handleViewStockDetails}
-                                    className="w-full px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
-                                >
-                                    <span>eye</span>
-                                    View Product Details
-                                </button>
+                                
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Stock Details Modal */}
-            {showStockDetails && addedProduct && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-2xl w-full mx-4">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                                Product Stock Details
-                            </h3>
-                            <button
-                                onClick={() => setShowStockDetails(false)}
-                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                            >
-                                <span className="text-2xl">x</span>
-                            </button>
-                        </div>
-                        
-                        <div className="space-y-6">
-                            {/* Product Image */}
-                            {addedProduct.image_url && (
-                                <div className="flex justify-center">
-                                    <img
-                                        src={`http://localhost:5000/${addedProduct.image_url}`}
-                                        alt={addedProduct.product_name}
-                                        className="w-48 h-48 object-cover rounded-lg border-2 border-emerald-200"
-                                    />
-                                </div>
-                            )}
-                            
-                            {/* Product Information */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Product Name</p>
-                                    <p className="font-semibold text-gray-900 dark:text-white">{addedProduct.product_name}</p>
-                                </div>
-                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Category</p>
-                                    <p className="font-semibold text-gray-900 dark:text-white">{addedProduct.category}</p>
-                                </div>
-                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Quantity in Stock</p>
-                                    <p className="font-semibold text-emerald-600 dark:text-emerald-400 text-2xl">{addedProduct.quantity} units</p>
-                                </div>
-                                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Price</p>
-                                    <p className="font-semibold text-gray-900 dark:text-white text-2xl">{addedProduct.price} RWF</p>
-                                </div>
-                            </div>
-                            
-                            {/* Current Stock Display */}
-                            <div className="bg-emerald-50 dark:bg-emerald-900 p-6 rounded-lg">
-                                <h4 className="text-lg font-semibold text-emerald-800 dark:text-emerald-200 mb-4 flex items-center gap-2">
-                                    <span>warehouse</span>
-                                    Your Current Stock
-                                </h4>
-                                <div className="space-y-3 max-h-64 overflow-y-auto">
-                                    {farmerStock.length > 0 ? (
-                                        farmerStock.map(item => (
-                                            <div key={item.product_id} className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-emerald-200">
-                                                <div className="flex justify-between items-center">
-                                                    <div>
-                                                        <p className="font-semibold text-gray-900 dark:text-white">{item.product_name}</p>
-                                                        <p className="text-xs text-gray-600 dark:text-gray-400">{item.category}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="font-bold text-emerald-600 dark:text-emerald-400">{item.quantity} units</p>
-                                                        <p className="text-xs text-gray-500">{item.price} RWF</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-4">
-                                            <p className="text-gray-500 dark:text-gray-400">No products in stock</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            
-                            {/* Action Buttons */}
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowStockDetails(false)}
-                                    className="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
-                                >
-                                    Continue Adding Products
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowStockDetails(false);
-                                        navigate('/farmer-dashboard');
-                                    }}
-                                    className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                                >
-                                    Go to Dashboard
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+           
         </div>
     );
 }

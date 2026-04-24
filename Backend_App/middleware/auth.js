@@ -33,12 +33,18 @@ module.exports = (req, res, next) => {
       db.query("SELECT user_id, role, status FROM users WHERE user_id = ?", [decoded.user_id], (err, result) => {
         if (err) {
           console.error('Database error checking user status:', err);
-          return res.status(500).json({ message: "Authentication error" });
+          if (!res.headersSent) {
+            return res.status(500).json({ message: "Authentication error" });
+          }
+          return;
         }
 
         if (result.length === 0) {
           console.log('User not found in database:', decoded.user_id);
-          return res.status(401).json({ message: "User not found" });
+          if (!res.headersSent) {
+            return res.status(401).json({ message: "User not found" });
+          }
+          return;
         }
 
         const user = result[0];
@@ -53,13 +59,18 @@ module.exports = (req, res, next) => {
           } else if (userStatus === 'suspended') {
             message = "Your account has been suspended. Contact support for assistance.";
           }
-          return res.status(403).json({ message: message, status: user.status });
+          if (!res.headersSent) {
+            return res.status(403).json({ message: message, status: user.status });
+          }
+          return;
         }
 
         req.user = decoded;
         req.user.status = user.status;
         console.log('Authentication successful for user:', decoded.user_id, 'status:', user.status);
-        return next();
+        if (!res.headersSent) {
+          return next();
+        }
       });
     } catch (error) {
       // Log security event with detailed error

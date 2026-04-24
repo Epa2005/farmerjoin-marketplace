@@ -1,7 +1,29 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../dbConnection");
-const auth = require("../middleware/auth");
+const jwt = require("jsonwebtoken");
+
+// Simple authentication middleware (no status check)
+const simpleAuth = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const token = authHeader.replace('Bearer ', '');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+        
+        if (!decoded.user_id || !decoded.role) {
+            return res.status(401).json({ message: 'Invalid token payload' });
+        }
+
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+};
 
 // Middleware to check if user is admin or sub_admin
 const isAdminOrSubAdmin = (req, res, next) => {
@@ -25,7 +47,7 @@ const isAdminOrSubAdmin = (req, res, next) => {
 };
 
 // Create Order
-router.post("/create", auth, (req, res) => {
+router.post("/create", simpleAuth, (req, res) => {
   const { items } = req.body;
 
   db.query(
@@ -58,7 +80,7 @@ router.post("/create", auth, (req, res) => {
 });
 
 // Get orders for buyer
-router.get("/my-orders", auth, (req, res) => {
+router.get("/my-orders", simpleAuth, (req, res) => {
   db.query(
     "SELECT buyer_id FROM buyers WHERE user_id=?",
     [req.user.user_id],
@@ -89,7 +111,7 @@ router.get("/my-orders", auth, (req, res) => {
 });
 
 // Get orders for farmer
-router.get("/farmer-orders", auth, (req, res) => {
+router.get("/farmer-orders", simpleAuth, (req, res) => {
   db.query(
     "SELECT farmer_id FROM farmers WHERE user_id=?",
     [req.user.user_id],

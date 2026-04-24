@@ -13,8 +13,12 @@ const Checkout = () => {
   // Helper function to fix image URLs
   const fixImageUrl = (imageUrl) => {
     if (!imageUrl) return null;
-    // Replace port 4000 with 5000 for backend API
-    return imageUrl.replace(':4000/', ':5000/');
+    // If image starts with http, just replace port if needed
+    if (imageUrl.startsWith('http')) {
+      return imageUrl.replace(':4000/', ':5000/');
+    }
+    // Otherwise, prepend the full backend URL
+    return `http://localhost:5000/${imageUrl.startsWith('uploads/') ? imageUrl : 'uploads/products/' + imageUrl}`;
   };
   const [formData, setFormData] = useState({
     firstName: '',
@@ -409,18 +413,7 @@ const Checkout = () => {
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t('zipCode') || 'ZIP Code (Optional)'}
-                      </label>
-                      <input
-                        type="text"
-                        name="zipCode"
-                        value={formData.zipCode}
-                        onChange={handleInputChange}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                      />
-                    </div>
+                    
                   </div>
                 </div>
               </div>
@@ -429,20 +422,7 @@ const Checkout = () => {
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-xl font-semibold text-gray-800 mb-4">{t('paymentMethod') || 'Payment Method'}</h2>
                 <div className="space-y-3">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="cod"
-                      checked={formData.paymentMethod === 'cod'}
-                      onChange={handleInputChange}
-                      className="mr-3"
-                    />
-                    <div>
-                      <label className="ml-2">{t('cashOnDelivery') || 'Cash on Delivery'}</label>
-                      <p className="text-sm text-gray-600">{t('payWhenReceiveOrder') || 'Pay when you receive your order'}</p>
-                    </div>
-                  </label>
+                  
                   <label className="flex items-center">
                     <input
                       type="radio"
@@ -476,20 +456,8 @@ const Checkout = () => {
 
               {/* Debug Buttons */}
               <div className="grid grid-cols-2 gap-4 mb-4">
-                <button
-                  type="button"
-                  onClick={testAuthentication}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-                >
-                  🐛 Debug Auth
-                </button>
-                <button
-                  type="button"
-                  onClick={testBackendConnection}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-                >
-                  🔌 Test Backend
-                </button>
+                
+                
               </div>
 
               {/* Submit Button */}

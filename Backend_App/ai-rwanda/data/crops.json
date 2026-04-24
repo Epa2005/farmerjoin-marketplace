@@ -1,0 +1,110 @@
+{
+  "banana": {
+    "names": { "en": "Banana", "rw": "Igitoki / Imbogi" },
+    "altitude_m": [1000, 2000],
+    "soil": "Deep, well-drained loam, pH 5.5–7.0",
+    "season": ["A", "B"],
+    "spacing_m": "3 x 3",
+    "maturity_months": [9, 12],
+    "yield_t_per_ha": [25, 40]
+  },
+  "coffee": {
+    "names": { "en": "Coffee", "rw": "Ikawa" },
+    "altitude_m": [1400, 2000],
+    "soil": "Volcanic, well-drained, pH 5.0–6.5",
+    "season": ["A"],
+    "spacing_m": "2 x 2",
+    "maturity_months": [36, 48],
+    "yield_t_per_ha": [0.8, 1.5]
+  },
+  "maize": {
+    "names": { "en": "Maize", "rw": "Ibigori" },
+    "altitude_m": [900, 2200],
+    "soil": "Loam, pH 5.5–7.5",
+    "season": ["A", "B"],
+    "spacing_m": "0.75 x 0.30",
+    "maturity_months": [3, 4],
+    "yield_t_per_ha": [3, 6]
+  },
+  "beans": {
+    "names": { "en": "Beans", "rw": "Ibishyimbo" },
+    "altitude_m": [1000, 2200],
+    "soil": "Well-drained loam, pH 6.0–7.0",
+    "season": ["A", "B"],
+    "spacing_m": "0.40 x 0.10",
+    "maturity_months": [2, 3],
+    "yield_t_per_ha": [1.2, 2.5]
+  },
+  "potato": {
+    "names": { "en": "Irish Potato", "rw": "Ibirayi" },
+    "altitude_m": [1800, 2500],
+    "soil": "Volcanic loam, pH 5.0–6.0",
+    "season": ["A", "B"],
+    "spacing_m": "0.75 x 0.30",
+    "maturity_months": [3, 4],
+    "yield_t_per_ha": [15, 25]
+  },
+  "sweet_potato": {
+    "names": { "en": "Sweet Potato", "rw": "Ibijumba" },
+    "altitude_m": [1000, 2000],
+    "soil": "Sandy loam, pH 5.5–6.5",
+    "season": ["A", "C"],
+    "spacing_m": "1 x 0.30",
+    "maturity_months": [4, 6],
+    "yield_t_per_ha": [10, 20]
+  },
+  "cassava": {
+    "names": { "en": "Cassava", "rw": "Imyumbati" },
+    "altitude_m": [600, 1800],
+    "soil": "Sandy loam, drought tolerant, pH 5.5–7.0",
+    "season": ["A", "B"],
+    "spacing_m": "1 x 1",
+    "maturity_months": [9, 18],
+    "yield_t_per_ha": [10, 25]
+  },
+  "rice": {
+    "names": { "en": "Rice", "rw": "Umuceri" },
+    "altitude_m": [900, 1700],
+    "soil": "Marshland clay, pH 5.5–7.0",
+    "season": ["A", "B"],
+    "spacing_m": "0.20 x 0.20",
+    "maturity_months": [4, 5],
+    "yield_t_per_ha": [4, 7]
+  },
+  "tea": {
+    "names": { "en": "Tea", "rw": "Icyayi" },
+    "altitude_m": [1500, 2500],
+    "soil": "Acidic well-drained, pH 4.5–5.5",
+    "season": ["A"],
+    "spacing_m": "1.2 x 0.6",
+    "maturity_months": [36, 48],
+    "yield_t_per_ha": [2, 4]
+  },
+  "sorghum": {
+    "names": { "en": "Sorghum", "rw": "Amasaka" },
+    "altitude_m": [1000, 2000],
+    "soil": "Loam, drought tolerant, pH 5.5–7.5",
+    "season": ["B"],
+    "spacing_m": "0.75 x 0.20",
+    "maturity_months": [4, 5],
+    "yield_t_per_ha": [1.5, 3]
+  },
+  "soybean": {
+    "names": { "en": "Soybean", "rw": "Soya" },
+    "altitude_m": [1000, 1800],
+    "soil": "Loam, pH 6.0–7.0",
+    "season": ["B"],
+    "spacing_m": "0.50 x 0.05",
+    "maturity_months": [3, 4],
+    "yield_t_per_ha": [1.2, 2.5]
+  },
+  "tomato": {
+    "names": { "en": "Tomato", "rw": "Inyanya" },
+    "altitude_m": [1000, 2000],
+    "soil": "Well-drained loam, pH 6.0–6.8",
+    "season": ["A", "B", "C"],
+    "spacing_m": "1 x 0.50",
+    "maturity_months": [3, 4],
+    "yield_t_per_ha": [20, 40]
+  }
+}

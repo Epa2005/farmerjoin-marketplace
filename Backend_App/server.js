@@ -10,6 +10,7 @@ const db = require("./dbConnection");
 const multer = require('multer');
 const axios = require('axios'); // Add axios for web scraping
 const helmet = require('helmet');
+const path = require('path');
 
 // Import authentication middleware
 const auth = require('./middleware/auth');
@@ -157,7 +158,53 @@ app.use("/uploads/admin", (req, res, next) => {
     etag: true
 }));
 
+// Profile uploads static files with CORS headers
+app.use("/uploads/profiles", (req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+}, express.static("uploads/profiles", {
+    maxAge: '1d',
+    etag: true
+}));
+
 // Configure multer for secure file uploads
+const MIME_TYPE_TO_EXT = {
+    'image/jpeg': 'jpeg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/webp': 'webp'
+};
+
+const getExtensionFromMimeType = (mimetype) => {
+    const normalizedMime = (mimetype || '').toLowerCase();
+    if (!normalizedMime.startsWith('image/')) return '';
+
+    if (MIME_TYPE_TO_EXT[normalizedMime]) {
+        return MIME_TYPE_TO_EXT[normalizedMime];
+    }
+
+    const subtype = normalizedMime.split('/')[1] || '';
+    const cleanedSubtype = subtype.split('+')[0].replace(/[^a-z0-9]/g, '');
+    return cleanedSubtype || '';
+};
+
+const getFileExtension = (file) => {
+    const rawExt = path.extname(file.originalname || '').replace('.', '').trim().toLowerCase();
+    if (rawExt) return rawExt;
+    return getExtensionFromMimeType(file.mimetype);
+};
+
+const imageFileFilter = (req, file, cb) => {
+    const mimeType = (file.mimetype || '').toLowerCase();
+    if (!mimeType.startsWith('image/')) {
+        return cb(new Error('Invalid file type. Only image files are allowed.'), false);
+    }
+    cb(null, true);
+};
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, 'uploads/products/');
@@ -165,7 +212,7 @@ const storage = multer.diskStorage({
     filename: function (req, file, cb) {
         // Generate secure filename
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = file.originalname.split('.').pop();
+        const ext = getFileExtension(file) || 'jpg';
         cb(null, `product-${uniqueSuffix}.${ext}`);
     }
 });
@@ -176,17 +223,7 @@ const upload = multer({
         fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024, // 5MB default
         files: 1 // Limit to 1 file per request
     },
-    fileFilter: function (req, file, cb) {
-        const allowedTypes = process.env.ALLOWED_FILE_TYPES ? 
-            process.env.ALLOWED_FILE_TYPES.split(',') : 
-            ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-        
-        const ext = file.originalname.split('.').pop().toLowerCase();
-        if (!allowedTypes.includes(ext)) {
-            return cb(new Error(`Invalid file type. Allowed types: ${allowedTypes.join(', ')}`), false);
-        }
-        cb(null, true);
-    }
+    fileFilter: imageFileFilter
 });
 
 // Admin upload storage configuration
@@ -204,7 +241,7 @@ const adminStorage = multer.diskStorage({
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const ext = file.originalname.split('.').pop();
+        const ext = getFileExtension(file) || 'jpg';
         cb(null, `admin-${uniqueSuffix}.${ext}`);
     }
 });
@@ -212,21 +249,69 @@ const adminStorage = multer.diskStorage({
 const adminUpload = multer({ 
     storage: adminStorage,
     limits: {
-        fileSize: parseInt(process.env.MAX_FILE_SIZE) || 5 * 1024 * 1024, // 5MB default
-        files: 1 // Limit to 1 file per request
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+        files: 1
     },
-    fileFilter: function (req, file, cb) {
-        const allowedTypes = process.env.ALLOWED_FILE_TYPES ? 
-            process.env.ALLOWED_FILE_TYPES.split(',') : 
-            ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    fileFilter: imageFileFilter
+});
+
+// Configure multer for profile photo uploads
+const profileStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const fs = require('fs');
+        const uploadDir = 'uploads/profiles';
         
-        const ext = file.originalname.split('.').pop().toLowerCase();
-        if (!allowedTypes.includes(ext)) {
-            return cb(new Error(`Invalid file type. Allowed types: ${allowedTypes.join(', ')}`), false);
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
         }
-        cb(null, true);
+        
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = getFileExtension(file) || 'jpg';
+        cb(null, 'profile-' + uniqueSuffix + '.' + ext);
     }
 });
+
+const profileUpload = multer({ 
+    storage: profileStorage,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+        files: 1
+    },
+    fileFilter: imageFileFilter
+});
+
+// Simple authentication middleware (no status check)
+const simpleAuth = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    console.log('simpleAuth called, authHeader:', authHeader ? 'exists' : 'missing');
+    if (!authHeader) {
+        console.log('No token provided');
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    try {
+        const token = authHeader.replace('Bearer ', '');
+        console.log('Token:', token.substring(0, 20) + '...');
+        console.log('JWT_SECRET:', process.env.JWT_SECRET || 'secretkey');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secretkey');
+        console.log('Decoded token:', decoded);
+
+        if (!decoded.user_id || !decoded.role) {
+            console.log('Invalid token payload');
+            return res.status(401).json({ message: 'Invalid token payload' });
+        }
+
+        req.user = decoded;
+        next();
+    } catch (error) {
+        console.log('Token verification error:', error.message);
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+};
 
 // Middleware to check if user is admin
 const isAdmin = (req, res, next) => {
@@ -422,13 +507,15 @@ app.post("/auth/login", loginLimiter, validateInput(validateLogin), (req, res) =
             // Log successful login
             console.log(`User logged in: ${email}, Role: ${user.role}`);
 
-            res.json({ 
+            res.json({
                 token,
                 user: {
                     user_id: user.user_id,
                     role: user.role,
                     full_name: user.full_name,
-                    email: user.email
+                    email: user.email,
+                    phone: user.phone,
+                    photo: user.photo ? (user.photo.startsWith('http') ? user.photo : `http://localhost:5000/${user.photo}`) : null
                 }
             });
         } catch (compareError) {
@@ -3392,7 +3479,7 @@ app.post('/buyer/cart/add', (req, res) => {
                     res.json({ 
                         message: 'Product added to cart successfully',
                         stockReduced: true,
-                        newStock: newStock
+                        newStock: product.quantity - parseInt(quantity)
                     });
                 }
             } catch (error) {
@@ -4008,32 +4095,216 @@ app.get('/buyer/farmers', auth.requireRole(['buyer']), (req, res) => {
 });
 
 // Get buyer's cart (secured)
-app.get('/buyer/cart', auth.requireRole(['buyer']), (req, res) => {
+app.get('/buyer/cart', simpleAuth, (req, res) => {
     const buyerId = req.user.user_id;
-    
+
     const query = `
-        SELECT 
+        SELECT
             c.*,
             p.product_name,
             p.category,
             p.image,
+            p.farmer_id,
             u.full_name as farmer_name,
             f.location as farm_location
         FROM cart c
         JOIN products p ON c.product_id = p.product_id
         JOIN users u ON p.farmer_id = u.user_id
-        JOIN farmers f ON p.farmer_id = f.user_id
+        LEFT JOIN farmers f ON p.farmer_id = f.user_id
         WHERE c.buyer_id = ?
         ORDER BY c.created_at DESC
     `;
-    
+
     db.query(query, [buyerId], (err, results) => {
         if (err) {
             console.error('Database error:', err);
             return res.status(500).json({ message: 'Failed to fetch cart' });
         }
-        
+
+        console.log('Cart items fetched for buyer:', buyerId, results);
         res.json(results);
+    });
+});
+
+// Get buyer stats (secured)
+app.get('/buyers/stats', simpleAuth, (req, res) => {
+    const userId = req.user.user_id;
+
+    // Get the buyer_id from the buyers table using the user_id from JWT
+    db.query('SELECT buyer_id FROM buyers WHERE user_id = ?', [userId], (err, buyerResult) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ message: 'Failed to fetch buyer info' });
+        }
+
+        if (buyerResult.length === 0) {
+            return res.status(403).json({ message: 'Not a buyer' });
+        }
+
+        const actualBuyerId = buyerResult[0].buyer_id;
+
+        const query = `
+            SELECT
+                COUNT(DISTINCT o.order_id) as totalOrders,
+                COALESCE(SUM(o.total_amount), 0) as totalSpent,
+                COUNT(DISTINCT CASE WHEN o.status = 'pending' THEN o.order_id END) as pendingOrders,
+                COUNT(DISTINCT CASE WHEN o.status = 'delivered' THEN o.order_id END) as deliveredOrders
+            FROM orders o
+            WHERE o.buyer_id = ?
+        `;
+
+        db.query(query, [actualBuyerId], (err, results) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({ message: 'Failed to fetch buyer stats' });
+            }
+
+            const stats = results[0] || {
+                totalOrders: 0,
+                totalSpent: 0,
+                pendingOrders: 0,
+                deliveredOrders: 0
+            };
+
+            // Ensure totalSpent is a number
+            stats.totalSpent = parseFloat(stats.totalSpent) || 0;
+
+            res.json(stats);
+        });
+    });
+});
+
+// Get current user profile (secured)
+app.get('/api/user/profile', simpleAuth, (req, res) => {
+    const userId = req.user.user_id;
+
+    const query = `
+        SELECT
+            user_id,
+            full_name,
+            email,
+            phone,
+            role,
+            photo,
+            status,
+            created_at
+        FROM users
+        WHERE user_id = ?
+    `;
+
+    db.query(query, [userId], (err, results) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ message: 'Failed to fetch profile' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const user = results[0];
+        // Add full image path if photo exists
+        if (user.photo) {
+            user.photo = user.photo.startsWith('http') ? user.photo : `http://localhost:5000/${user.photo}`;
+        }
+
+        res.json(user);
+    });
+});
+
+// Update user profile (secured)
+app.put('/api/user/profile', simpleAuth, profileUpload.single('photo'), (req, res) => {
+    const userId = req.user.user_id;
+    const { full_name, phone, email } = req.body;
+
+    // Build update query dynamically
+    let updates = [];
+    let values = [];
+
+    if (full_name) {
+        updates.push('full_name = ?');
+        values.push(full_name);
+    }
+
+    if (phone) {
+        updates.push('phone = ?');
+        values.push(phone);
+    }
+
+    if (email) {
+        updates.push('email = ?');
+        values.push(email);
+    }
+
+    // Handle photo upload
+    if (req.file) {
+        updates.push('photo = ?');
+        values.push(`uploads/profiles/${req.file.filename}`);
+    }
+
+    if (updates.length === 0) {
+        return res.status(400).json({ message: 'No fields to update' });
+    }
+
+    values.push(userId);
+
+    const query = `UPDATE users SET ${updates.join(', ')} WHERE user_id = ?`;
+
+    db.query(query, values, (err, result) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ message: 'Failed to update profile' });
+        }
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Fetch updated user data
+        const selectQuery = `
+            SELECT user_id, full_name, email, phone, role, photo, status
+            FROM users WHERE user_id = ?
+        `;
+
+        db.query(selectQuery, [userId], (err, results) => {
+            if (err) {
+                return res.status(500).json({ message: 'Profile updated but failed to fetch updated data' });
+            }
+
+            const user = results[0];
+            if (user.photo) {
+                user.photo = user.photo.startsWith('http') ? user.photo : `http://localhost:5000/${user.photo}`;
+            }
+
+            res.json({
+                message: 'Profile updated successfully',
+                user: user
+            });
+        });
+    });
+});
+
+// Update profile photo (secured)
+app.post('/api/user/profile/photo', auth, (req, res) => {
+    const userId = req.user.user_id;
+
+    // For now, just return an error since we need to handle multipart properly
+    return res.status(501).json({ message: 'Profile photo upload via URL not implemented yet. Please use the profile update endpoint.' });
+});
+
+// Delete profile photo (secured)
+app.delete('/api/user/profile/photo', simpleAuth, (req, res) => {
+    const userId = req.user.user_id;
+
+    const query = 'UPDATE users SET photo = NULL WHERE user_id = ?';
+
+    db.query(query, [userId], (err, result) => {
+        if (err) {
+            console.error('Database error:', err);
+            return res.status(500).json({ message: 'Failed to remove profile photo' });
+        }
+
+        res.json({ message: 'Profile photo removed successfully' });
     });
 });
 
@@ -4110,21 +4381,21 @@ app.delete('/buyer/cart/:cartId', auth.requireRole(['buyer']), (req, res) => {
 });
 
 // Remove item from cart by product ID (alternative endpoint)
-app.delete('/buyer/cart/product/:productId', auth.requireRole(['buyer']), (req, res) => {
-    const buyerId = req.user.user_id;
+app.delete('/buyer/cart/product/:productId', simpleAuth, (req, res) => {
+    const buyerId = req.user.user_id; // Use user_id directly as buyer_id (same as GET endpoint)
     const { productId } = req.params;
-    
+
     if (!parseInt(productId)) {
         return res.status(400).json({ message: 'Invalid product ID' });
     }
-    
+
     // Start transaction to restore stock
     db.beginTransaction(async (err) => {
         if (err) {
             console.error('Transaction error:', err);
             return res.status(500).json({ message: 'Database error' });
         }
-        
+
         try {
             // Get cart item details before deletion
             const getCartItemQuery = `
@@ -4133,21 +4404,21 @@ app.delete('/buyer/cart/product/:productId', auth.requireRole(['buyer']), (req, 
                 JOIN products p ON c.product_id = p.product_id
                 WHERE c.product_id = ? AND c.buyer_id = ?
             `;
-            
+
             const cartItem = await new Promise((resolve, reject) => {
                 db.query(getCartItemQuery, [parseInt(productId), buyerId], (err, results) => {
                     if (err) reject(err);
                     else resolve(results[0]);
                 });
             });
-            
+
             if (!cartItem) {
                 await new Promise((resolve) => {
                     db.rollback(() => resolve());
                 });
                 return res.status(404).json({ message: 'Cart item not found' });
             }
-            
+
             // Delete cart item
             const deleteQuery = 'DELETE FROM cart WHERE product_id = ? AND buyer_id = ?';
             await new Promise((resolve, reject) => {
@@ -4156,7 +4427,7 @@ app.delete('/buyer/cart/product/:productId', auth.requireRole(['buyer']), (req, 
                     else resolve(result);
                 });
             });
-            
+
             // Commit transaction
             await new Promise((resolve, reject) => {
                 db.commit((err) => {
@@ -4164,19 +4435,83 @@ app.delete('/buyer/cart/product/:productId', auth.requireRole(['buyer']), (req, 
                     else resolve();
                 });
             });
-            
-            res.json({ 
+
+            res.json({
                 message: 'Item removed from cart successfully'
             });
-            
+
         } catch (error) {
             // Rollback transaction on error
             await new Promise((resolve) => {
                 db.rollback(() => resolve());
             });
-            
+
             console.error('Error removing from cart:', error);
             res.status(500).json({ message: 'Failed to remove from cart' });
+        }
+    });
+});
+
+// Clear entire cart (secured)
+app.delete('/buyer/cart/clear', simpleAuth, (req, res) => {
+    console.log('Clear cart endpoint hit, user:', req.user);
+    const buyerId = req.user.user_id; // Use user_id directly as buyer_id (same as GET endpoint)
+    console.log('Using buyer_id:', buyerId);
+
+    // Start transaction to restore stock for all items
+    db.beginTransaction(async (err) => {
+        if (err) {
+            console.error('Transaction error:', err);
+            return res.status(500).json({ message: 'Database error' });
+        }
+
+        try {
+            // Get all cart items for this buyer
+            const cartItems = await new Promise((resolve, reject) => {
+                db.query('SELECT * FROM cart WHERE buyer_id = ?', [buyerId], (err, results) => {
+                    if (err) reject(err);
+                    else resolve(results);
+                });
+            });
+
+            console.log('Cart items to clear:', cartItems);
+
+            // Restore stock for each item
+            for (const item of cartItems) {
+                await new Promise((resolve, reject) => {
+                    db.query('UPDATE products SET quantity = quantity + ? WHERE product_id = ?',
+                        [item.quantity, item.product_id], (err, result) => {
+                            if (err) reject(err);
+                            else resolve(result);
+                        });
+                });
+            }
+
+            // Delete all cart items for this buyer
+            await new Promise((resolve, reject) => {
+                db.query('DELETE FROM cart WHERE buyer_id = ?', [buyerId], (err, result) => {
+                    if (err) reject(err);
+                    else resolve(result);
+                });
+            });
+
+            // Commit transaction
+            await new Promise((resolve, reject) => {
+                db.commit((err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+
+            res.json({ message: 'Cart cleared successfully' });
+        } catch (error) {
+            // Rollback transaction on error
+            await new Promise((resolve) => {
+                db.rollback(() => resolve());
+            });
+
+            console.error('Error clearing cart:', error);
+            res.status(500).json({ message: 'Failed to clear cart' });
         }
     });
 });
@@ -4914,10 +5249,17 @@ app.delete('/farmer/products/:productId', (req, res) => {
                 }
                 
                 const { cart_count, order_count } = results[0];
-                
-                // Always use hard delete since status column doesn't exist
-                const deleteQuery = 'DELETE FROM products WHERE product_id = ? AND farmer_id = ?';
-                db.query(deleteQuery, [parseInt(productId), farmerId], (err, result) => {
+
+                // First delete order_items that reference this product (to avoid foreign key constraint)
+                db.query('DELETE FROM order_items WHERE product_id = ?', [parseInt(productId)], (err) => {
+                    if (err) {
+                        console.error('Error deleting order_items:', err);
+                        // Continue with product deletion even if order_items deletion fails
+                    }
+
+                    // Always use hard delete since status column doesn't exist
+                    const deleteQuery = 'DELETE FROM products WHERE product_id = ? AND farmer_id = ?';
+                    db.query(deleteQuery, [parseInt(productId), farmerId], (err, result) => {
                     if (err) {
                         console.error('Database error:', err);
                         return res.status(500).json({ message: 'Failed to delete product' });
@@ -4928,6 +5270,7 @@ app.delete('/farmer/products/:productId', (req, res) => {
                     }
                     
                     res.json({ message: 'Product deleted successfully' });
+                    });
                 });
             });
         });

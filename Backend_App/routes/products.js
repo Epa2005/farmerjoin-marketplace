@@ -128,25 +128,33 @@ router.delete("/:id", auth, (req, res) => {
       if (result.length === 0) return res.status(403).json({ message: "Not authorized to delete this product" });
 
       const imagePath = result[0].image;
-      
-      // Delete product from database
-      db.query("DELETE FROM products WHERE product_id=?", [productId], (err, result) => {
-        if (err) return res.status(500).json(err);
-        
-        // Delete image file if it exists
-        if (imagePath) {
-          const fullPath = path.join(__dirname, '..', imagePath);
-          fs.unlink(fullPath, (unlinkErr) => {
-            if (unlinkErr) {
-              console.error('Error deleting image file:', unlinkErr);
-              // Don't fail the request if image deletion fails
-            } else {
-              console.log('Image file deleted successfully:', fullPath);
-            }
-          });
+
+      // First delete order_items that reference this product (to avoid foreign key constraint)
+      db.query("DELETE FROM order_items WHERE product_id=?", [productId], (err) => {
+        if (err) {
+          console.error('Error deleting order_items:', err);
+          // Continue with product deletion even if order_items deletion fails
         }
-        
-        res.json({ message: "Product deleted successfully" });
+
+        // Delete product from database
+        db.query("DELETE FROM products WHERE product_id=?", [productId], (err, result) => {
+          if (err) return res.status(500).json(err);
+
+          // Delete image file if it exists
+          if (imagePath) {
+            const fullPath = path.join(__dirname, '..', imagePath);
+            fs.unlink(fullPath, (unlinkErr) => {
+              if (unlinkErr) {
+                console.error('Error deleting image file:', unlinkErr);
+                // Don't fail the request if image deletion fails
+              } else {
+                console.log('Image file deleted successfully:', fullPath);
+              }
+            });
+          }
+
+          res.json({ message: "Product deleted successfully" });
+        });
       });
     }
   );

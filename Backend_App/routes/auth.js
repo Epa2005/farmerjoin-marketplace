@@ -69,13 +69,14 @@ router.post("/login", (req, res) => {
         "secretkey"
       );
 
-      return res.json({ 
+      return res.json({
         token,
         user: {
           user_id: user.user_id,
           role: user.role,
           full_name: user.full_name,
-          email: user.email
+          email: user.email,
+          photo: user.photo ? (user.photo.startsWith('http') ? user.photo : `http://localhost:5000/${user.photo}`) : null
         }
       });
     }
@@ -90,13 +91,14 @@ router.post("/login", (req, res) => {
       "secretkey"
     );
 
-    res.json({ 
+    res.json({
       token,
       user: {
         user_id: user.user_id,
         role: user.role,
         full_name: user.full_name,
-        email: user.email
+        email: user.email,
+        photo: user.photo ? (user.photo.startsWith('http') ? user.photo : `http://localhost:5000/${user.photo}`) : null
       }
     });
   });
