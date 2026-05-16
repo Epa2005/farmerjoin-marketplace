@@ -1,0 +1,151 @@
+{
+  "app_name": "FarmerJoin",
+  "products": "Ibicuruzwa",
+  "register": "Iyandikishe",
+  "login": "Injira",
+  "dashboard": "Idashboardi",
+  "about": "Ibyerekeye",
+  "contact": "Twandikire",
+  "logout": "Sohoka",
+  
+  "home": {
+    "welcome": "Murakaza neza kuri FarmerJoin",
+    "tagline": "Guhugura abahinzi n'abaguzi. Ibikoresho bishya, ibiciro bikwiye, n'ubuhinzi bugendana n'iterambere kuri bose.",
+    "join_as_farmer": "Jyira nk'umuhinzi",
+    "browse_products": "Rondera ibicuruzwa",
+    "why_choose": "None ni iyihe mpamvu ya'FarmerJoin?",
+    "fair_prices": "Ibiciro bikwiye",
+    "fair_prices_desc": "Fata ibiciro bikwiye kugicuruzwa cyawe utari ikigega cy'ibitegura",
+    "fresh_produce": "Ibikoresho bishya",
+    "fresh_produce_desc": "Kugira uruhushya rw'ibikoresho bishya bahinze mu Rwanda",
+    "trusted_platform": "Ikiganiro gikwiye",
+    "trusted_platform_desc": "Ikiganiro gituma abahinzi n'abaguzi bamenya amakuru",
+    "ready_to_start": "Urashaka gutangira?",
+    "ready_to_start_desc": "Jya mu baguzi n'abahinzi batandatanje bari bifashisha FarmerJoin",
+    "register_now": "Iyandikishe nonaha"
+  },
+  
+  "login": {
+    "title": "Injira",
+    "email": "Imeli",
+    "email_placeholder": "Andika imeli yawe",
+    "password": "Ijambo ry'ibanga",
+    "password_placeholder": "Andika ijambo ry'ibanga",
+    "submit": "Injira",
+    "new_user": "Umukoresha mushya?",
+    "register_link": "Iyandikishe",
+    "login_with_google": "Injira na Google",
+    "login_with_facebook": "Injira na Facebook",
+    "forgot_password": "Wibagiwe ijambo ry'ibanga?",
+    "login_failed": "Injira irashatse. Gerageza none.",
+    "login_success": "Winjiye neza!"
+  },
+  
+  "register": {
+    "title": "Fata konti",
+    "subtitle": "Jya mu FarmerJoin uyu musi",
+    "full_name": "Amazina yuzuye",
+    "full_name_placeholder": "Andika amazina yawe yuzuye",
+    "email": "Imeli",
+    "email_placeholder": "Andika imeli yawe",
+    "phone": "Nomero ya telephone",
+    "phone_placeholder": "Andika nomero ya telephone",
+    "password": "Ijambo ry'ibanga",
+    "password_placeholder": "Fata ijambo ry'ibanga",
+    "role": "Nashaka kujya nk'",
+    "farmer": "Uhinzi",
+    "buyer": "Umuguzi",
+    "submit": "Fata konti",
+    "submitting": "Fata konti...",
+    "already_have": "Winze konti?",
+    "sign_in": "Injira",
+    "success": "Ifatwa ry'akonti rirasize! Ngendo kugira injira...",
+    "failed": "Ifatwa ry'akonti rirashatse. Gerageza none."
+  },
+  
+  "footer": {
+    "description": "Guhugura abahinzi n'abaguzi. Dutsinda ikigega hagati y'abahinzi n'imitungo, tugira ibiciro bikwiye n'ibikoresho bishya.",
+    "quick_links": "Amafoto hafi",
+    "contact_us": "Twandikire",
+    "email": "Imeli",
+    "phone": "Telephone",
+    "rights": "© 2026 FarmerJoin. Buri burengerwa."
+  },
+  
+  "products": {
+    "title": "Ibicuruzwa",
+    "search": "Shaka",
+    "filter": "Hitamo",
+    "no_products": "Nta bicuruzwa bibonetse",
+    "add_product": "Ongeramo ibicuruzwa",
+    "price": "Igiciro",
+    "quantity": "Ingano",
+    "description": "Ibisobanuro",
+    "category": "Ubwoko",
+    "farmer": "Umuhinzi",
+    "contact": "Twandikire"
+  },
+  
+  "dashboard": {
+    "title": "Idashboardi",
+    "welcome": "Murakaza neza",
+    "my_products": "Ibicuruzwa byanjye",
+    "add_product": "Ongeramo ibicuruzwa",
+    "orders": "Ibitekerezo",
+    "profile": "Umwirondoro",
+    "settings": "Igenamiterwe",
+    "total_products": "Ibicuruzwa byose",
+    "pending_orders": "Ibitekerezo biriho",
+    "completed_orders": "Ibyakozwe"
+  },
+  
+  "add_product": {
+    "title": "Ongeramo ibicuruzwa",
+    "name": "Izina",
+    "name_placeholder": "Andika izina ry'ibicuruzwa",
+    "price": "Igiciro",
+    "price_placeholder": "Andika igiciro",
+    "quantity": "Ingano",
+    "quantity_placeholder": "Andika ingano",
+    "description": "Ibisobanuro",
+    "description_placeholder": "Andika ibisobanuro",
+    "category": "Ubwoko",
+    "category_placeholder": "Hitamo ubwoko",
+    "image": "Ishusho",
+    "submit": "Ohereza",
+    "submitting": "Ohereza...",
+    "success": "Icuruzwa ryongewe neza!",
+    "failed": "nti bikunze. Gerageza none."
+  },
+  
+  "about": {
+    "title": "Ibyerekeye FarmerJoin",
+    "mission": "Inshingano yacu",
+    "mission_desc": "Kugira ngo duhugure abahinzi n'abaguzi, tugira ibiciro bikwiye n'ibikoresho bishya",
+    "vision": "Ibyiringiro byacu",
+    "vision_desc": "Kuba ikiganiro cy'ibanze mu bihugu bijyambere mu buhinzi",
+    "values": "Inzego zacu",
+    "values_desc": "Ukuri, iterambere, n'ubumwe"
+  },
+  
+  "common": {
+    "loading": "Kurasa...",
+    "error": "Habaye ikosa",
+    "success": "Byakunze",
+    "save": "Bika",
+    "cancel": "reka",
+    "edit": "Hindura",
+    "delete": "Siba",
+    "confirm": "Emeza",
+    "back": "Subira inyuma",
+    "next": "Komeza",
+    "submit": "Ohereza",
+    "close": "Funga"
+  },
+  
+  "language": {
+    "select": "Hitamo ururimi",
+    "kinyarwanda": "Kinyarwanda",
+    "kiswahili": "Kiswahili"
+  }
+}

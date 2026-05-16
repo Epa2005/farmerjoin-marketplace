@@ -1,0 +1,151 @@
+{
+  "app_name": "FarmerJoin",
+  "products": "Bidhaa",
+  "register": "Jisajili",
+  "login": "Ingia",
+  "dashboard": "Dashibodi",
+  "about": "Kuhusu",
+  "contact": "Wasiliana",
+  "logout": "Toka",
+  
+  "home": {
+    "welcome": "Karibu kwa FarmerJoin",
+    "tagline": "Kuunganisha wakulima na wanunuzi. Mboga mpya, bei nzuri, na kilimo endelevu kwa kila mmoja.",
+    "join_as_farmer": "Jiunge kama mkulima",
+    "browse_products": "Vinjari Bidhaa",
+    "why_choose": "Kwa nini chagua FarmerJoin?",
+    "fair_prices": "Bei nzuri",
+    "fair_prices_desc": "Pata bei nzuri kwa mazao yako bila wa wastani kuchukua sehemu kubwa",
+    "fresh_produce": "Mazao safi",
+    "fresh_produce_desc": "Upatikanaji wa moja kwa moja wa mazao safi, ya asili kutoka kwa wakulima unaowaamini.",
+    "trusted_platform": "Jukwaa la kutegemewa",
+    "failed": "Jukwaa la kuaminika linalounganisha wakulima na wanunuzi kwa uwazi.",
+    "ready_to_start": "Uko tayari kuanza?",
+    "ready_to_start_desc": "Jiunge na maelfu ya wakulima na wanunuzi tayari wanaotumia FarmerJoin.",
+    "register_now": "Jisajili sasa"
+  },
+  
+  "login": {
+    "title": "Ingia",
+    "email": "Barua pepe",
+    "email_placeholder": "Andika barua pepe yako",
+    "password": "Nenosiri",
+    "password_placeholder": "Andika nenosiri lako",
+    "submit": "Ingia",
+    "new_user": "Mtumiaji mpya?",
+    "register_link": "Jisajili",
+    "login_with_google": "Ingia na Google",
+    "login_with_facebook": "Ingia na Facebook",
+    "forgot_password": "Umesahau nenosiri?",
+    "login_failed": "Ingia imeshindikana. Jaribu tena.",
+    "login_success": "Umeingia successfully!"
+  },
+  
+  "register": {
+    "title": "Fungua akaunti",
+    "subtitle": "Jiunge na FarmerJoin leo",
+    "full_name": "Jina kamili",
+    "full_name_placeholder": "Andika jina lako kamili",
+    "email": "Barua pepe",
+    "email_placeholder": "Andika barua pepe yako",
+    "phone": "Nambari ya simu",
+    "phone_placeholder": "Andika nambari ya simu yako",
+    "password": "Nenosiri",
+    "password_placeholder": "Unda nenosiri",
+    "role": "Ningependa kujiunga kama",
+    "farmer": "Mkulima",
+    "buyer": "Mnunuzi",
+    "submit": "Fungua akaunti",
+    "submitting": "Kufungua akaunti...",
+    "already_have": "Tayari una akaunti?",
+    "sign_in": "Ingia",
+    "success": "Ufunguzi wa akaunti umefanika! Inakwenda kwenye ukurasa wa kuingia...",
+    "failed": "Ufunguzi wa akaunti umeshindikana. Jaribu tena."
+  },
+  
+  "footer": {
+    "description": "Kuunganisha wakulima na wanunuzi. Tunazuiisha pengo kati ya wakulima na masoko, kuhakikisha bei nzuri na mazao safi.",
+    "quick_links": "Viungo vya Haraka",
+    "contact_us": "Wasiliana Nasi",
+    "email": "Barua pepe",
+    "phone": "Simu",
+    "rights": "© 2026 FarmerJoin. Haki zote zimehifadhiwa."
+  },
+  
+  "products": {
+    "title": "Bidhaa",
+    "search": "Tafuta",
+    "filter": "Chuja",
+    "no_products": "Hakuna bidhaa zilizopatikana",
+    "add_product": "Ongeza bidhaa",
+    "price": "Bei",
+    "quantity": "Kiwango",
+    "description": "Maelezo",
+    "category": "Kitengo",
+    "farmer": "Mkulima",
+    "contact": "Wasiliana"
+  },
+  
+  "dashboard": {
+    "title": "Dashibodi",
+    "welcome": "Karibu",
+    "my_products": "Bidhaa zangu",
+    "add_product": "Ongeza bidhaa",
+    "orders": "Maagizo",
+    "profile": "Wasifu",
+    "settings": "Mipangilio",
+    "total_products": "Jumla ya bidhaa",
+    "pending_orders": "Maagizo yanayotarajiwa",
+    "completed_orders": "Maagizo yaliyokamilika"
+  },
+  
+  "add_product": {
+    "title": "Ongeza bidhaa",
+    "name": "Jina",
+    "name_placeholder": "Andika jina la bidhaa",
+    "price": "Bei",
+    "price_placeholder": "Andika bei",
+    "quantity": "Kiwango",
+    "quantity_placeholder": "Andika kiwango",
+    "description": "Maelezo",
+    "description_placeholder": "Andika maelezo",
+    "category": "Kitengo",
+    "category_placeholder": "Chagua kitengo",
+    "image": "Picha",
+    "submit": "Wasilisha",
+    "submitting": "Kuwasilisha...",
+    "success": "Bidhaa imeongezwa successfully!",
+    "failed": "Kuongeza bidhaa kimeshindikana. Jaribu tena."
+  },
+  
+  "about": {
+    "title": "Kuhusu FarmerJoin",
+    "mission": "Dhumuni letu",
+    "mission_desc": "Kuunganisha wakulima na wanunuzi, kuhakikisha bei nzuri na mazao safi",
+    "vision": "Maono yetu",
+    "vision_desc": "Kuwa jukwaa kuu katika nchi zinazoendelea kilimoni",
+    "values": "Maadili yetu",
+    "values_desc": "Kweli, maendeleo, na umoja"
+  },
+  
+  "common": {
+    "loading": "Inapakia...",
+    "error": "Hitilafu imetokea",
+    "success": "Imefanika",
+    "save": "Hifadhi",
+    "cancel": "Ghairi",
+    "edit": "Hariri",
+    "delete": "Futa",
+    "confirm": "Thibitisha",
+    "back": "Rudi nyuma",
+    "next": "Endelea",
+    "submit": "Wasilisha",
+    "close": "Funga"
+  },
+  
+  "language": {
+    "select": "Chagua lugha",
+    "kinyarwanda": "Kinyarwanda",
+    "kiswahili": "Kiswahili"
+  }
+}

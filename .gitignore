@@ -1,0 +1,59 @@
+# Node modules
+node_modules/
+my-app/node_modules/
+Backend_App/node_modules/
+
+# Environment variables
+.env
+Backend_App/.env
+
+# Uploads directory (images and files)
+Backend_App/uploads/
+uploads/
+
+# Build outputs
+my-app/dist/
+my-app/build/
+Backend_App/dist/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Test files and temporary files
+Backend_App/test_*.js
+Backend_App/debug_*.js
+Backend_App/check_*.js
+Backend_App/*.bat
+Backend_App/*.sql
+Backend_App/*.md
+Backend_App/simple*.js
+Backend_App/app2.js
+Backend_App/user-data-server.js
+Backend_App/user_form.html
+Backend_App/user_data.csv
+Backend_App/student_class.py
+Backend_App/test-image-uploaded.html
+Backend_App/test-registration.html
+
+# Backup and broken files
+my-app/src/pages/*.backup
+my-app/src/pages/*.broken
+my-app/src/pages/*.corrupted
+my-app/src/pages/*_Backup.jsx
+my-app/src/pages/*_Fixed.jsx
+my-app/src/pages/*_Test.jsx
+my-app/src/pages/ForgotPassword_temp.txt
+my-app/src/pages/Login_Simple.jsx
+my-app/src/styles/design-system.css

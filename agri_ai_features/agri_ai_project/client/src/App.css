@@ -1,0 +1,50 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 760px;
+    margin: 32px auto;
+    padding: 16px;
+}
+
+h1 {
+    margin-bottom: 12px;
+}
+
+.section {
+    margin-bottom: 18px;
+}
+
+textarea {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+}
+
+select {
+    margin-left: 8px;
+}
+
+.row {
+    margin-top: 8px;
+}
+
+button {
+    padding: 8px 14px;
+    cursor: pointer;
+}
+
+.response {
+    background: #f7f7f8;
+    padding: 12px;
+    border-radius: 6px;
+    overflow: auto;
+    max-height: 360px;
+}
+
+.muted {
+    color: #666;
+}

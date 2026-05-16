@@ -1,0 +1,22 @@
+.navbar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #948787;
+}
+
+.card {
+    background: rgb(189, 180, 180);
+    padding: 20px;
+    width: 350px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.break {
+    margin-bottom: 30px;
+    border: 1px solid #ccc;
+    padding: 45px;
+    width: 350px;
+}
