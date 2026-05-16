@@ -42,7 +42,7 @@ const registerLimiter = createRateLimiter(
 const validateInput = (validations) => {
   return async (req, res, next) => {
     await Promise.all(validations.map(validation => validation.run(req)));
-    
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -62,12 +62,12 @@ const validateRegistration = [
     .withMessage('Full name must be between 2 and 100 characters')
     .matches(/^[a-zA-Z\s'-]+$/)
     .withMessage('Full name can only contain letters, spaces, hyphens, and apostrophes'),
-  
+
   body('email')
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
-  
+
   body('phone')
     .matches(/^\+?[1-9]\d{7,14}$/)
     .withMessage('Please provide a valid phone number in international format (e.g. +2507XXXXXXXX)'),
@@ -76,7 +76,7 @@ const validateRegistration = [
     .optional()
     .isIn(['buyer', 'farmer', 'cooperative'])
     .withMessage('Role must be one of: buyer, farmer, cooperative'),
-  
+
   body('password')
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters long')
@@ -88,7 +88,7 @@ const validateLogin = [
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
-  
+
   body('password')
     .notEmpty()
     .withMessage('Password is required')
@@ -101,22 +101,22 @@ const validateProduct = [
     .isLength({ min: 1, max: 200 })
     .withMessage('Product name must be between 1 and 200 characters')
     .escape(),
-  
+
   body('category')
     .optional()
     .trim()
     .isLength({ max: 50 })
     .withMessage('Category must be less than 50 characters')
     .escape(),
-  
+
   body('price')
     .isFloat({ min: 0 })
     .withMessage('Price must be a positive number'),
-  
+
   body('quantity')
     .isInt({ min: 0 })
     .withMessage('Quantity must be a non-negative integer'),
-  
+
   body('farmer_id')
     .isInt({ min: 1 })
     .withMessage('Farmer ID must be a positive integer')
@@ -144,19 +144,38 @@ const helmetConfig = helmet({
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS ? 
-      process.env.ALLOWED_ORIGINS.split(',') : 
+    const allowedOrigins = process.env.ALLOWED_ORIGINS ?
+      process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) :
       ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'];
-    
+
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
+    // If ALLOWED_ORIGINS contains a wildcard '*' allow all origins
+    if (allowedOrigins.includes('*')) return callback(null, true);
+
+    // Allow explicit matches
     if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
+      return callback(null, true);
     }
+
+    // Allow Render subdomains by suffix (e.g. *.onrender.com)
+    try {
+      const originHost = new URL(origin).hostname;
+      if (originHost && originHost.endsWith('.onrender.com')) {
+        return callback(null, true);
+      }
+    } catch (e) {
+      // ignore URL parse errors
+    }
+
+    // Also allow a single FRONTEND_URL env override
+    if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) {
+      return callback(null, true);
+    }
+
+    console.log('CORS blocked origin:', origin);
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   optionsSuccessStatus: 200
@@ -168,25 +187,25 @@ const validateFileUpload = (req, res, next) => {
     return res.status(400).json({ message: 'No file uploaded' });
   }
 
-  const allowedTypes = process.env.ALLOWED_FILE_TYPES ? 
-    process.env.ALLOWED_FILE_TYPES.split(',') : 
+  const allowedTypes = process.env.ALLOWED_FILE_TYPES ?
+    process.env.ALLOWED_FILE_TYPES.split(',') :
     ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-  
+
   const fileExtension = req.file.originalname.split('.').pop().toLowerCase();
-  
+
   if (!allowedTypes.includes(fileExtension)) {
-    return res.status(400).json({ 
-      message: `Invalid file type. Allowed types: ${allowedTypes.join(', ')}` 
+    return res.status(400).json({
+      message: `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`
     });
   }
 
-  const maxSize = process.env.MAX_FILE_SIZE ? 
-    parseInt(process.env.MAX_FILE_SIZE) : 
+  const maxSize = process.env.MAX_FILE_SIZE ?
+    parseInt(process.env.MAX_FILE_SIZE) :
     5 * 1024 * 1024; // 5MB default
-  
+
   if (req.file.size > maxSize) {
-    return res.status(400).json({ 
-      message: `File too large. Maximum size: ${maxSize / 1024 / 1024}MB` 
+    return res.status(400).json({
+      message: `File too large. Maximum size: ${maxSize / 1024 / 1024}MB`
     });
   }
 
