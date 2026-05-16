@@ -1,0 +1,20 @@
+{
+  "A": {
+    "name": { "en": "Season A", "rw": "Igihembwe A" },
+    "months": ["September", "October", "November", "December", "January", "February"],
+    "rainfall": "Short rains — moderate",
+    "best_crops": ["beans", "maize", "sweet_potato", "potato", "vegetables"]
+  },
+  "B": {
+    "name": { "en": "Season B", "rw": "Igihembwe B" },
+    "months": ["March", "April", "May", "June"],
+    "rainfall": "Long rains — heavy",
+    "best_crops": ["beans", "maize", "sorghum", "soybean", "rice"]
+  },
+  "C": {
+    "name": { "en": "Season C", "rw": "Igihembwe C" },
+    "months": ["July", "August"],
+    "rainfall": "Dry season — irrigation needed",
+    "best_crops": ["vegetables", "sweet_potato", "cassava"]
+  }
+}
