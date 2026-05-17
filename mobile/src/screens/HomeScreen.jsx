@@ -49,8 +49,8 @@ export default function HomeScreen() {
           {products.slice(0, 5).map((product) => (
             <TouchableOpacity key={product.product_id} style={styles.productCard}>
               {product.image && (
-                <Image 
-                  source={{ uri: `http://192.168.1.100:5000${product.image}` }} 
+                <Image
+                  source={{ uri: `${API.defaults?.baseURL || 'http://localhost:5000'}${product.image.startsWith('/') ? product.image : '/' + product.image}` }}
                   style={styles.productImage}
                 />
               )}

@@ -1,14 +1,13 @@
 // Helper function to get the correct backend URL for images
 export const getBackendUrl = () => {
-  const hostname = window.location.hostname;
-  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-  return isLocalhost ? 'http://localhost:5000' : `http://${hostname}:5000`;
+  // Prefer the current origin (protocol + host). Avoid hardcoding ports.
+  return window.location.origin;
 };
 
 // Helper function to fix/build image URLs
 export const buildImageUrl = (imageUrl) => {
   if (!imageUrl) return null;
-  
+
   // If image already starts with http, replace localhost with current hostname if needed
   if (imageUrl.startsWith('http')) {
     const hostname = window.location.hostname;
@@ -17,9 +16,12 @@ export const buildImageUrl = (imageUrl) => {
     }
     return imageUrl;
   }
-  
-  // Otherwise, prepend the backend URL
+
+  // Otherwise, use the current origin so the browser requests the same host
   const baseUrl = getBackendUrl();
+  if (imageUrl.startsWith('/')) {
+    return `${baseUrl}${imageUrl}`;
+  }
   if (imageUrl.startsWith('uploads/')) {
     return `${baseUrl}/${imageUrl}`;
   }
