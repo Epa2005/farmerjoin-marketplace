@@ -316,6 +316,16 @@ app.get('/uploads/products/:filename', (req, res, next) => {
         return next();
     }
 
+    // If Supabase Storage is configured, try redirecting to the public object URL
+    const supabaseUrl = process.env.SUPABASE_URL || '';
+    const supabaseBucket = process.env.SUPABASE_PUBLIC_BUCKET || process.env.SUPABASE_BUCKET || '';
+    if (supabaseUrl && supabaseBucket) {
+        // Construct Supabase public URL: {SUPABASE_URL}/storage/v1/object/public/{bucket}/{path}
+        const publicUrl = `${supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/${supabaseBucket}/${encodeURIComponent(req.params.filename)}`;
+        return res.redirect(302, publicUrl);
+    }
+
+    // Fallback SVG if file not found locally and no Supabase configured
     const fallbackSvg = `
         <svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
             <defs>

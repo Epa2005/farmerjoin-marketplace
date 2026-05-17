@@ -4,8 +4,9 @@ import axios from "axios";
 const getBackendUrl = () => {
   const hostname = window.location.hostname;
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-  // Use local backend for development, Render backend for production
-  return isLocalhost ? 'http://localhost:5000' : 'https://farmerjoin-marketplace.onrender.com';
+  // Use local backend for development. In production, use the current origin
+  // so requests target the same host the frontend is served from.
+  return isLocalhost ? 'http://localhost:5000' : window.location.origin;
 };
 
 const API = axios.create({
