@@ -13257,3 +13257,21 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`🌐 Internet Sources: Weather, Market Prices, Farming News, Crop Calendar`);
 
 });
+
+// Serve frontend build (optional): if my-app/build exists, serve it and fall back to index.html
+try {
+    const clientBuildDir = path.join(__dirname, '..', 'my-app', 'build');
+    if (fs.existsSync(clientBuildDir)) {
+        app.use(express.static(clientBuildDir));
+
+        // For all non-API and non-upload routes, serve index.html (SPA fallback)
+        app.get('*', (req, res, next) => {
+            const url = req.originalUrl || req.url || '';
+            if (url.startsWith('/api') || url.startsWith('/uploads') || url.startsWith('/socket.io')) return next();
+            res.sendFile(path.join(clientBuildDir, 'index.html'));
+        });
+        console.log('Serving client build from', clientBuildDir);
+    }
+} catch (e) {
+    console.warn('Could not configure client build serving:', e.message);
+}
