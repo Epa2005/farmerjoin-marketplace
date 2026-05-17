@@ -1,6 +1,15 @@
+import API from '../api';
+
 // Helper function to get the correct backend URL for images
 export const getBackendUrl = () => {
-  // Prefer the current origin (protocol + host). Avoid hardcoding ports.
+  // Prefer the configured API baseURL (matches where API requests go).
+  // Fall back to window.location.origin if API isn't available.
+  try {
+    const base = API?.defaults?.baseURL;
+    if (base) return base.replace(/\/$/, '');
+  } catch (e) {
+    // ignore
+  }
   return window.location.origin;
 };
 
