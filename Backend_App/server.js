@@ -254,6 +254,15 @@ app.use('/api', mobileMoneyRoutes);
 
 app.use('/api/ai', aiRouter);
 
+// Mount stats router (platform statistics)
+try {
+    const statsRouter = require('./routes/stats');
+    app.use('/stats', statsRouter);
+    console.log('Mounted /stats router');
+} catch (e) {
+    console.warn('Stats router not available:', e.message);
+}
+
 // Mount Agri AI proxy router (for embedding external agri AI service)
 
 try {
@@ -8123,14 +8132,11 @@ app.get('/admin/images/slider', (req, res) => {
 
 
 
-        // Add full URL to each image
-
+        // Add full URL to each image using request host so it works in production
+        const baseUrl = (req.protocol || 'http') + '://' + (req.get('host') || ('localhost:' + (process.env.PORT || 5000)));
         const imagesWithUrls = results.map(image => ({
-
             ...image,
-
-            url: `http://localhost:5000/${image.path}`
-
+            url: `${baseUrl}/${image.path}`
         }));
 
 
@@ -13268,7 +13274,35 @@ try {
         app.get('*', (req, res, next) => {
             const url = req.originalUrl || req.url || '';
             if (url.startsWith('/api') || url.startsWith('/uploads') || url.startsWith('/socket.io')) return next();
-            res.sendFile(path.join(clientBuildDir, 'index.html'));
+
+            // Serve index.html but inject a runtime API URL so the client can call the correct backend
+            try {
+                let indexHtml = fs.readFileSync(path.join(clientBuildDir, 'index.html'), 'utf8');
+                const backendUrl = (process.env.VITE_API_URL && process.env.VITE_API_URL.trim())
+                    ? process.env.VITE_API_URL.trim()
+                    : `${req.protocol}://${req.get('host')}`;
+
+                const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
+                const supabaseBucket = (process.env.SUPABASE_PUBLIC_BUCKET || process.env.SUPABASE_BUCKET || '').trim();
+
+                const injectScript = `\n<script>
+window.__API_URL = "${backendUrl.replace(/"/g, '\\"')}";
+window.__SUPABASE = ${JSON.stringify({ url: supabaseUrl, bucket: supabaseBucket })};
+</script>\n`;
+
+                // Inject before closing </head> if present, otherwise prepend
+                if (indexHtml.includes('</head>')) {
+                    indexHtml = indexHtml.replace('</head>', `${injectScript}</head>`);
+                } else {
+                    indexHtml = injectScript + indexHtml;
+                }
+
+                res.setHeader('Content-Type', 'text/html');
+                return res.send(indexHtml);
+            } catch (e) {
+                console.warn('Failed to read/modify index.html for runtime injection:', e.message);
+                return res.sendFile(path.join(clientBuildDir, 'index.html'));
+            }
         });
         console.log('Serving client build from', clientBuildDir);
     }

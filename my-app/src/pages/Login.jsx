@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import { Link } from "react-router-dom";
 import API from "../api";
 import { useTranslation } from "../hooks/useTranslation";
@@ -9,6 +10,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +19,7 @@ function Login() {
 
     try {
       const res = await API.post("/auth/login", { email, password });
-      
+
       console.log("Login API Response:", res.data);
       console.log("Response structure:", {
         hasToken: !!res.data?.token,
@@ -28,32 +30,55 @@ function Login() {
         fullUser: res.data?.user,
         fullResponse: res.data
       });
-      
+
       const token = res.data?.token || res.data?.access_token;
-      const user = res.data?.user || res.data;
-      
+      let user = res.data?.user || (res.data && typeof res.data === 'object' ? res.data : null);
+
       console.log("Extracted user data:", user);
       console.log("User role:", user?.role);
+
+      // If backend returns token but not user role, decode JWT to extract role
+      const parseJwt = (t) => {
+        try {
+          const payload = t.split('.')[1];
+          const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+          return decoded;
+        } catch (e) {
+          return null;
+        }
+      };
+
+      if (token) {
+        if (!user || !user.role) {
+          const payload = parseJwt(token);
+          if (payload) {
+            user = user || {};
+            if (!user.user_id && payload.user_id) user.user_id = payload.user_id;
+            if (!user.role && payload.role) user.role = payload.role;
+            if (!user.email && payload.email) user.email = payload.email;
+          }
+        }
+      }
 
       if (token && user) {
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user));
-        
+
         // Navigate based on role
         let targetRoute = "/dashboard"; // Default to dashboard for farmers and cooperatives
         const userRole = (user.role || "").toLowerCase();
-        
+
         console.log("Navigating to:", targetRoute, "for role:", userRole);
-        
+
         if (userRole === "buyer") targetRoute = "/buyer-dashboard";
         else if (userRole === "farmer") targetRoute = "/dashboard";
         else if (userRole === "cooperative") targetRoute = "/dashboard"; // Cooperatives also use the main dashboard
         else if (userRole === "sub_admin") targetRoute = "/sub-admin-dashboard";
         else if (userRole === "admin") targetRoute = "/admin-dashboard";
         else targetRoute = "/dashboard"; // Default to dashboard for any farmer-like role
-        
+
         console.log("Final target route:", targetRoute);
-        window.location.href = targetRoute;
+        navigate(targetRoute, { replace: true });
       } else {
         console.error("Invalid login response - missing token or user");
         setError("Invalid login response");
@@ -95,7 +120,7 @@ function Login() {
                 {t('signInToAccount', 'Sign in to your account')}
               </p>
             </div>
-            
+
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center space-x-2">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -104,7 +129,7 @@ function Login() {
                 <span>{error}</span>
               </div>
             )}
-            
+
             <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
               <div className="space-y-5">
                 <div>
@@ -151,12 +176,12 @@ function Login() {
                 </button>
               </div>
             </form>
-            
+
             <div className="text-center mt-6 pt-6 border-t border-gray-200">
               <p className="text-sm text-gray-600">
                 {t('dontHaveAccount', "Don't have an account?")}{' '}
-                <Link 
-                  to="/register" 
+                <Link
+                  to="/register"
                   className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors duration-200"
                 >
                   {t('register', 'Register')}

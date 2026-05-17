@@ -37,4 +37,17 @@ export const buildImageUrl = (imageUrl) => {
   return `${baseUrl}/uploads/products/${imageUrl}`;
 };
 
+// Build a Supabase public object URL for a filename and optional prefix
+export const buildSupabasePublicUrl = (filename, prefix = '') => {
+  try {
+    const sup = (typeof window !== 'undefined' && window.__SUPABASE) ? window.__SUPABASE : null;
+    if (!sup || !sup.url || !sup.bucket) return null;
+    const cleanPrefix = prefix ? `${prefix.replace(/^\/+|\/+$/g, '')}/` : '';
+    const key = `${cleanPrefix}${filename}`;
+    return `${sup.url.replace(/\/$/, '')}/storage/v1/object/public/${sup.bucket}/${encodeURIComponent(key)}`;
+  } catch (e) {
+    return null;
+  }
+};
+
 export default buildImageUrl;

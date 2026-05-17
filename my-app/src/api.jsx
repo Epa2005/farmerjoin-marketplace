@@ -1,17 +1,28 @@
 import axios from "axios";
 
-// Dynamically determine backend URL based on current hostname
+// Prefer a runtime `window.__API_URL`, then build-time `VITE_API_URL`, then hostname logic.
 const getBackendUrl = () => {
+  try {
+    if (typeof window !== 'undefined' && window.__API_URL) {
+      return window.__API_URL;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  const envUrl = import.meta.env?.VITE_API_URL;
+  if (envUrl) return envUrl;
+
   const hostname = window.location.hostname;
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-  // Use local backend for development. In production, use the current origin
-  // so requests target the same host the frontend is served from.
+  // Use local backend for development. In production, default to the current origin
   return isLocalhost ? 'http://localhost:5000' : window.location.origin;
 };
 
 const API = axios.create({
   baseURL: getBackendUrl()
 });
+console.log('API baseURL:', API.defaults.baseURL);
 
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
@@ -35,7 +46,7 @@ API.interceptors.response.use(
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+        window.location.hash = '#/login';
       }
       return Promise.reject(error);
     }
@@ -51,7 +62,7 @@ API.interceptors.response.use(
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         // Redirect to login
-        window.location.href = '/login';
+        window.location.hash = '#/login';
         return Promise.reject(error);
       }
     }

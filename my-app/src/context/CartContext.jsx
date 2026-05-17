@@ -9,7 +9,7 @@ const cartReducer = (state, action) => {
         ...state,
         selectedFarmer: action.payload
       };
-    
+
     case 'CLEAR_SELECTED_FARMER':
       return {
         ...state,
@@ -158,7 +158,7 @@ export const CartProvider = ({ children }) => {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           localStorage.removeItem('userRole');
-          window.location.href = '/login';
+          window.location.hash = '#/login';
           throw new Error('Session expired. Please login again.');
         }
         throw new Error(data.message || 'Failed to add to cart');
@@ -216,7 +216,7 @@ export const CartProvider = ({ children }) => {
       const item = state.items.find(item =>
         String(item.product_id) === String(productId) || String(item.id) === String(productId)
       );
-      
+
       if (item) {
         // Call backend to remove from cart and restore stock
         const token = localStorage.getItem('token');
@@ -236,7 +236,7 @@ export const CartProvider = ({ children }) => {
           }
         }
       }
-      
+
       // Remove from local state
       dispatch({ type: 'REMOVE_FROM_CART', payload: productId });
     } catch (error) {

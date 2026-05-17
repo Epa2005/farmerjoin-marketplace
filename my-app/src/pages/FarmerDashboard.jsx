@@ -37,9 +37,9 @@ const FarmerDashboard = () => {
     // Check authentication
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user'));
-    
+
     if (!token || !user) {
-      window.location.href = '/login';
+      navigate('/login', { replace: true });
       return;
     }
 
@@ -47,11 +47,11 @@ const FarmerDashboard = () => {
     if (user.role !== 'farmer' && user.role !== 'cooperative') {
       // Redirect to appropriate dashboard for other roles
       if (user.role === "buyer") {
-        window.location.href = '/buyer-dashboard';
+        navigate('/buyer-dashboard', { replace: true });
       } else if (user.role === "admin") {
-        window.location.href = '/admin-dashboard';
+        navigate('/admin-dashboard', { replace: true });
       } else {
-        window.location.href = '/login';
+        navigate('/login', { replace: true });
       }
       return;
     }
@@ -61,7 +61,7 @@ const FarmerDashboard = () => {
     fetchProducts(token);
     fetchOrders(token);
     fetchNotifications(token);
-    
+
     // Setup WebSocket for real-time notifications
     setupWebSocket(token);
 
@@ -289,7 +289,7 @@ const FarmerDashboard = () => {
       const token = localStorage.getItem('token');
       await API.put(`/farmer/products/${stockProduct.product_id}/stock`,
         { quantity: stockQuantity },
-        { headers: { Authorization: `Bearer ${token}` }}
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setProducts(prev => prev.map(p =>
@@ -314,7 +314,7 @@ const FarmerDashboard = () => {
       const token = localStorage.getItem('token');
       await API.put(`/farmer/products/${priceProduct.product_id}/price`,
         { price: parseFloat(newPrice) },
-        { headers: { Authorization: `Bearer ${token}` }}
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setProducts(prev => prev.map(p =>
@@ -336,7 +336,7 @@ const FarmerDashboard = () => {
     const activeProducts = products.filter(p => p.quantity > 0).length;
     const outOfStock = products.filter(p => p.quantity === 0).length;
     const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= 10).length;
-    
+
     return {
       activeProducts,
       outOfStock,
@@ -357,7 +357,7 @@ const FarmerDashboard = () => {
   const filteredProducts = products
     .filter(product => {
       const matchesSearch = product.product_name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = filterStatus === 'all' || 
+      const matchesFilter = filterStatus === 'all' ||
         (filterStatus === 'in_stock' && product.quantity > 0) ||
         (filterStatus === 'out_of_stock' && product.quantity === 0) ||
         (filterStatus === 'low_stock' && product.quantity > 0 && product.quantity <= 10);
@@ -400,7 +400,7 @@ const FarmerDashboard = () => {
                   <p className="text-sm text-gray-500">{t('manageFarmBusiness', 'Manage your farm business')}</p>
                 </div>
               </div>
-              
+
               {/* User Profile Dropdown */}
               <div className="relative">
                 <button
@@ -463,7 +463,7 @@ const FarmerDashboard = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3">
               {/* Language Selector */}
               <div className="relative">
@@ -539,14 +539,12 @@ const FarmerDashboard = () => {
                   notifications.map((notification, index) => (
                     <div
                       key={notification.id || notification.notification_id || `notification-${index}`}
-                      className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-all duration-200 ${
-                        !notification.read ? 'bg-emerald-50/50 border-l-4 border-l-emerald-500' : ''
-                      }`}
+                      className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-all duration-200 ${!notification.read ? 'bg-emerald-50/50 border-l-4 border-l-emerald-500' : ''
+                        }`}
                     >
                       <div className="flex items-start space-x-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          !notification.read ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600'
-                        }`}>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${!notification.read ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-600'
+                          }`}>
                           {notification.type === 'order' ? (
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -640,7 +638,7 @@ const FarmerDashboard = () => {
               <span>{t('growthThisMonth', 'Growth this month')}</span>
             </div>
           </div>
-          
+
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -670,7 +668,7 @@ const FarmerDashboard = () => {
               {t('viewOrders', 'View Orders')}
             </button>
           </div>
-          
+
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -797,28 +795,27 @@ const FarmerDashboard = () => {
                       )}
                       {/* Stock Badge */}
                       <div className="absolute top-3 left-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          product.quantity === 0 ? 'bg-red-500 text-white' :
-                          product.quantity <= 10 ? 'bg-yellow-500 text-white' :
-                          'bg-emerald-500 text-white'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${product.quantity === 0 ? 'bg-red-500 text-white' :
+                            product.quantity <= 10 ? 'bg-yellow-500 text-white' :
+                              'bg-emerald-500 text-white'
+                          }`}>
                           {product.quantity === 0 ? t('outOfStock') :
-                           product.quantity <= 10 ? t('lowStock') : t('inStock')}
+                            product.quantity <= 10 ? t('lowStock') : t('inStock')}
                         </span>
                       </div>
                     </div>
-                    
+
                     <div className="p-4">
                       <h3 className="font-semibold text-gray-900 mb-1 line-clamp-2 group-hover:text-emerald-600 transition-colors">
                         {product.product_name}
                       </h3>
                       <p className="text-sm text-gray-500 mb-3 line-clamp-2">{product.description}</p>
-                      
+
                       <div className="flex justify-between items-center mb-3">
                         <span className="text-lg font-bold text-emerald-600">RWF {Number(product.price).toLocaleString()}</span>
                         <span className="text-sm text-gray-500">{product.quantity} {t('units', 'units')}</span>
                       </div>
-                    
+
                       <div className="flex gap-2">
                         <button
                           onClick={() => {
@@ -1013,13 +1010,12 @@ const FarmerDashboard = () => {
 
                   <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                     <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{t('status')}</h4>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      selectedProduct.quantity === 0 ? 'bg-red-100 text-red-800' :
-                      selectedProduct.quantity <= 10 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${selectedProduct.quantity === 0 ? 'bg-red-100 text-red-800' :
+                        selectedProduct.quantity <= 10 ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                      }`}>
                       {selectedProduct.quantity === 0 ? t('outOfStock') :
-                       selectedProduct.quantity <= 10 ? t('lowStock') : t('inStock')}
+                        selectedProduct.quantity <= 10 ? t('lowStock') : t('inStock')}
                     </span>
                   </div>
                 </div>
@@ -1105,11 +1101,10 @@ const FarmerDashboard = () => {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          order.status === 'paid' ? 'bg-green-100 text-green-800' :
-                          order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${order.status === 'paid' ? 'bg-green-100 text-green-800' :
+                            order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                          }`}>
                           {t(order.status, order.status)}
                         </span>
                         <button
@@ -1177,12 +1172,11 @@ const FarmerDashboard = () => {
             <div className="space-y-4">
               <div className="p-4 bg-emerald-50 rounded-lg">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    !selectedNotification.read ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${!selectedNotification.read ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-600'
+                    }`}>
                     <span className="text-2xl">
                       {selectedNotification.type === 'order' ? 'package' :
-                       selectedNotification.type === 'order_update' ? 'file-text' : 'bell'}
+                        selectedNotification.type === 'order_update' ? 'file-text' : 'bell'}
                     </span>
                   </div>
                   <div>

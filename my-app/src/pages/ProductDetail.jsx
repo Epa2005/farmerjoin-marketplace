@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import API from "../api";
 import { useTranslation } from "../hooks/useTranslation";
 import { buildImageUrl } from '../utils/imageUrl';
+import { buildSupabasePublicUrl } from '../utils/imageUrl';
 import { useCart } from "../context/CartContext";
 
 function ProductDetail() {
@@ -68,7 +69,15 @@ function ProductDetail() {
             buildImageUrl(filename)
         ].filter(Boolean);
 
-        return [...new Set(candidates)];
+        // Also try Supabase public URLs (root and products/ prefix)
+        const supCandidates = [
+            buildSupabasePublicUrl(filename),
+            buildSupabasePublicUrl(filename, 'products'),
+            buildSupabasePublicUrl(filename, 'uploads'),
+            buildSupabasePublicUrl(filename, 'uploads/products')
+        ].filter(Boolean);
+
+        return [...new Set([...candidates, ...supCandidates])];
     };
 
     const getPrimaryImageSrc = (imageValue) => getImageCandidates(imageValue)[0] || null;
@@ -139,8 +148,8 @@ function ProductDetail() {
                     <div className="text-error-500 text-6xl mb-4">grass</div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('oopsSomethingWrong', 'Oops! Something went wrong')}</h3>
                     <p className="text-gray-600 mb-6">{error}</p>
-                    <button 
-                        onClick={() => window.location.reload()} 
+                    <button
+                        onClick={() => window.location.reload()}
                         className="btn-primary"
                     >
                         {t('tryAgain', 'Try Again')}
@@ -207,12 +216,12 @@ function ProductDetail() {
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                             {/* Main Image */}
                             <div className="relative group">
-                                <div 
+                                <div
                                     className="w-full aspect-square overflow-hidden cursor-pointer bg-gray-100 dark:bg-gray-700"
                                     onClick={() => setShowFullImage(true)}
                                 >
                                     {selectedImage ? (
-                                        <img 
+                                        <img
                                             src={getPrimaryImageSrc(selectedImage)}
                                             alt={product.product_name}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -246,11 +255,10 @@ function ProductDetail() {
                                     {product.image && (
                                         <div
                                             onClick={() => setSelectedImage(product.image)}
-                                            className={`flex-shrink-0 w-16 h-16 rounded cursor-pointer border-2 transition-all bg-gray-100 dark:bg-gray-700 ${
-                                                selectedImage === product.image
+                                            className={`flex-shrink-0 w-16 h-16 rounded cursor-pointer border-2 transition-all bg-gray-100 dark:bg-gray-700 ${selectedImage === product.image
                                                     ? 'border-emerald-500 shadow-md'
                                                     : 'border-gray-200 dark:border-gray-600 hover:border-emerald-300'
-                                            }`}
+                                                }`}
                                         >
                                             <img
                                                 src={getPrimaryImageSrc(product.image)}
@@ -272,11 +280,10 @@ function ProductDetail() {
                                             <div
                                                 key={relatedProduct.product_id}
                                                 onClick={() => setSelectedImage(relatedProduct.image)}
-                                                className={`flex-shrink-0 w-16 h-16 rounded cursor-pointer border-2 transition-all bg-gray-100 dark:bg-gray-700 ${
-                                                    selectedImage === relatedProduct.image
+                                                className={`flex-shrink-0 w-16 h-16 rounded cursor-pointer border-2 transition-all bg-gray-100 dark:bg-gray-700 ${selectedImage === relatedProduct.image
                                                         ? 'border-emerald-500 shadow-md'
                                                         : 'border-gray-200 dark:border-gray-600 hover:border-emerald-300'
-                                                }`}
+                                                    }`}
                                             >
                                                 <img
                                                     src={getPrimaryImageSrc(relatedProduct.image)}
@@ -337,11 +344,10 @@ function ProductDetail() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                    product.quantity > 0 
-                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' 
+                                <div className={`px-3 py-1 rounded-full text-xs font-bold ${product.quantity > 0
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
                                         : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                                }`}>
+                                    }`}>
                                     {product.quantity > 0 ? `${product.quantity} in stock` : 'Out of Stock'}
                                 </div>
                             </div>
@@ -364,21 +370,21 @@ function ProductDetail() {
                             <div className="flex items-center gap-4 mb-4">
                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('quantity', 'Quantity')}:</span>
                                 <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
-                                    <button 
+                                    <button
                                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
                                         className="w-10 h-10 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border-r border-gray-300 dark:border-gray-600"
                                     >
                                         -
                                     </button>
-                                    <input 
-                                        type="number" 
-                                        min="1" 
+                                    <input
+                                        type="number"
+                                        min="1"
                                         max={product.quantity}
                                         value={quantity}
                                         onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                                         className="w-16 h-10 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-none focus:outline-none"
                                     />
-                                    <button 
+                                    <button
                                         onClick={() => setQuantity(Math.min(product.quantity, quantity + 1))}
                                         className="w-10 h-10 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 border-l border-gray-300 dark:border-gray-600"
                                     >
@@ -395,11 +401,10 @@ function ProductDetail() {
                                 <button
                                     disabled={product.quantity <= 0 || addingToCart}
                                     onClick={handleAddToCart}
-                                    className={`py-3 px-6 rounded-lg font-semibold transition-all ${
-                                        product.quantity > 0 && !addingToCart
+                                    className={`py-3 px-6 rounded-lg font-semibold transition-all ${product.quantity > 0 && !addingToCart
                                             ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white hover:from-emerald-600 hover:to-green-700 shadow-lg'
                                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    }`}
+                                        }`}
                                 >
                                     {addingToCart ? t('adding', 'Adding...') : t('addToCart', 'Add to Cart')}
                                 </button>

@@ -285,19 +285,19 @@ const About = () => {
                             {
                                 name: 'Jean-Pierre Niyonzima',
                                 role: 'CEO & Co-Founder',
-                                image: '/images/team1.jpg',
+                                image: '/images/userphoto.jpg',
                                 bio: 'Agricultural technologist with 10+ years experience in Rwandan farming communities'
                             },
                             {
                                 name: 'Grace Mukamana',
                                 role: 'CTO & Co-Founder',
-                                image: '/images/team2.jpg',
+                                image: '/images/userphoto.jpg',
                                 bio: 'Software engineer passionate about building solutions for rural communities'
                             },
                             {
                                 name: 'Emmanuel Uwimana',
                                 role: 'Head of Operations',
-                                image: '/images/team3.jpg',
+                                image: '/images/userphoto.jpg',
                                 bio: 'Supply chain expert focused on creating efficient agricultural markets'
                             }
                         ].map((member, index) => (

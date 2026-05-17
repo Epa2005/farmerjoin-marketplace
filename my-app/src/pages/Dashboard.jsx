@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import API from "../api";
 import { useTranslation } from "../hooks/useTranslation";
@@ -22,6 +22,7 @@ function Dashboard() {
     });
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
+    const navigate = useNavigate();
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -129,7 +130,7 @@ function Dashboard() {
                                         <input
                                             type="text"
                                             value={newFarmer.full_name}
-                                            onChange={(e) => setNewFarmer({...newFarmer, full_name: e.target.value})}
+                                            onChange={(e) => setNewFarmer({ ...newFarmer, full_name: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                             required
                                         />
@@ -139,7 +140,7 @@ function Dashboard() {
                                         <input
                                             type="email"
                                             value={newFarmer.email}
-                                            onChange={(e) => setNewFarmer({...newFarmer, email: e.target.value})}
+                                            onChange={(e) => setNewFarmer({ ...newFarmer, email: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                             required
                                         />
@@ -152,7 +153,7 @@ function Dashboard() {
                                         <input
                                             type="tel"
                                             value={newFarmer.phone}
-                                            onChange={(e) => setNewFarmer({...newFarmer, phone: e.target.value})}
+                                            onChange={(e) => setNewFarmer({ ...newFarmer, phone: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                             required
                                         />
@@ -162,7 +163,7 @@ function Dashboard() {
                                         <input
                                             type="text"
                                             value={newFarmer.cooperative_name}
-                                            onChange={(e) => setNewFarmer({...newFarmer, cooperative_name: e.target.value})}
+                                            onChange={(e) => setNewFarmer({ ...newFarmer, cooperative_name: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                             required
                                         />
@@ -174,7 +175,7 @@ function Dashboard() {
                                     <input
                                         type="text"
                                         value={newFarmer.location}
-                                        onChange={(e) => setNewFarmer({...newFarmer, location: e.target.value})}
+                                        onChange={(e) => setNewFarmer({ ...newFarmer, location: e.target.value })}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                                         required
                                     />
@@ -251,7 +252,7 @@ function Dashboard() {
                 <div className="bg-white rounded-xl shadow-md p-6">
                     <h2 className="text-xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        
+
                         <Link
                             to="/products"
                             className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
@@ -276,7 +277,7 @@ function Dashboard() {
                         <button
                             onClick={() => {
                                 localStorage.removeItem("token");
-                                window.location.href = "/login";
+                                navigate('/login', { replace: true });
                             }}
                             className="flex flex-col items-center justify-center p-6 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                         >

@@ -6,9 +6,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "db:bootstrap:supabase": "node scripts/bootstrapSupabase.js"
-    ,"migrate:uploads": "node scripts/migrate_uploads_to_supabase.js"
-      ,"check:connections": "node scripts/check_supabase_connection.js"
+    "db:bootstrap:supabase": "node scripts/bootstrapSupabase.js",
+    "migrate:uploads": "node scripts/migrate_uploads_to_supabase.js",
+    "check:connections": "node scripts/check_supabase_connection.js"
   },
   "keywords": [],
   "author": "",
