@@ -92,23 +92,77 @@ function localizedIntro(lang) {
 
 function welcomeMessage(role) {
   const who = role ? ` (signed in as **${role}**)` : '';
-  return `Hello${who}! I'm the **FarmerJoin Assistant** — the built-in assistant that knows this marketplace inside-out.\n\nAsk me anything, such as:\n\n• "How do I register?"\n• "How do I add a product as a farmer?"\n• "How does mobile money payment work?"\n• "When are the farming seasons in Rwanda?"`;
+  return `Hello${who}! I'm the **FarmerJoin Assistant** — the built-in assistant that knows this marketplace inside-out.\n\nAsk me anything, such as:\n\n• "How do I register?"\n• "How do I add a product as a farmer?"\n• "How does mobile money payment work?"\n• "Tell me about farming seasons"\n• "What's new in the system?"`;
+}
+
+/** Build the full search space: static topics + live DB knowledge entries. */
+function buildSearchSpace(context) {
+  const extras = (context && context.knowledge) || [];
+  const dynamic = extras.map((entry) => {
+    const kws = String(entry.keywords || '')
+      .split(/[,\n]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (entry.topic && kws.length === 0) kws.push(entry.topic);
+    return {
+      id: 'kb_' + entry.id,
+      keywords: kws,
+      message: () => entry.answer || '',
+      followUps: entry.followUps || [],
+    };
+  });
+  return topics.concat(dynamic);
+}
+
+const LIVE_FACTS_TOPICS = new Set(['products', 'editProduct', 'market', 'orders']);
+
+function factsBlock(facts) {
+  if (!facts) return '';
+  const lines = [];
+  if (facts.totalProducts != null) lines.push(`${facts.totalProducts} products currently listed`);
+  if (Array.isArray(facts.categories) && facts.categories.length) {
+    lines.push(`Top categories right now: ${facts.categories.slice(0, 4).map((c) => c.category || c).join(', ')}`);
+  }
+  if (facts.counts && (facts.counts.farmer != null || facts.counts.buyer != null)) {
+    lines.push(`${facts.counts.farmer || 0} farmers and ${facts.counts.buyer || 0} buyers on the platform`);
+  }
+  if (!lines.length) return '';
+  return `\n\n**Live — direct from the system right now:** ${lines.join(' · ')}`;
+}
+
+function changelogAnswer(changes, lang) {
+  const list = Array.isArray(changes) ? changes : [];
+  if (!list.length) {
+    return 'There are no recent changes logged yet — the system is stable right now.';
+  }
+  const header = '**Latest updates to FarmerJoin:**';
+  const items = list.map((c) => {
+    const when = c.createdAt ? new Date(c.createdAt) : null;
+    const date = when && !isNaN(when) ? when.toLocaleDateString() : '';
+    const title = (c.title || 'Update').trim();
+    const desc = (c.description || '').trim();
+    return date ? `• **${title}** (${date})${desc ? ` — ${desc}` : ''}` : `• **${title}**${desc ? ` — ${desc}` : ''}`;
+  });
+  return `${header}\n\n${items.join('\n')}\n\nAsk me about any of them and I can explain what changed and why.`;
 }
 
 /**
  * Core entry point.
- * @param {object} opts { query, language?, role? }
+ * @param {object} opts { query, language?, role?, context? }
+ *   context = { facts?, changes?, knowledge? } — live system data merged in
+ *   by the route layer on every request.
  * @returns {{ success, provider, topic, language, answer, followUps }}
  */
-function answer({ query, language, role }) {
+function answer({ query, language, role, context }) {
   const cleaned = cleanQuery(query);
   const detected = language || detectLang(cleaned);
   const roleInfo = detectRole(cleaned, role);
   const ctxRole = roleInfo.role;
 
+  const searchSpace = buildSearchSpace(context);
   let best = null;
   let bestScore = 0;
-  for (const topic of topics) {
+  for (const topic of searchSpace) {
     const score = scoreTopic(cleaned, topic);
     if (score > bestScore) {
       bestScore = score;
@@ -122,10 +176,10 @@ function answer({ query, language, role }) {
     const guideId = ROLE_GUIDE[ctxRole];
     if (guideId) {
       if (best.id === 'roles') {
-        const guide = topics.find((t) => t.id === guideId);
+        const guide = searchSpace.find((t) => t.id === guideId);
         if (guide) best = guide;
       } else if (bestScore <= 1 && ctxRole && best.id !== guideId) {
-        const guide = topics.find((t) => t.id === guideId);
+        const guide = searchSpace.find((t) => t.id === guideId);
         if (guide && scoreTopic(cleaned, guide) > 0) best = guide;
       }
     }
@@ -142,7 +196,24 @@ function answer({ query, language, role }) {
     };
   }
 
-  const rendered = (best.message({ role: ctxRole, lang: detected }) || '').trim();
+  // "What's new?" → answer from the live change log (context.changes).
+  if (best.id === 'systemChangelog') {
+    return {
+      success: true,
+      provider: 'built-in',
+      topic: best.id,
+      language: detected,
+      answer: (localizedIntro(detected) || '') + changelogAnswer(context.changes, detected),
+      followUps: best.followUps || [],
+    };
+  }
+
+  let rendered = (best.message({ role: ctxRole, lang: detected }) || '').trim();
+
+  // Reflect the current database state in answers that mention live data.
+  if (LIVE_FACTS_TOPICS.has(best.id)) {
+    rendered += factsBlock(context ? context.facts : null);
+  }
 
   return {
     success: true,

@@ -124,6 +124,14 @@ function Navbar() {
                                 >
                                     {t('dashboard')}
                                 </Link>
+                                {user.role === 'farmer' && (
+                                    <Link
+                                        to="/add-product"
+                                        className="px-4 py-2 text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg font-medium transition-all duration-200 text-sm"
+                                    >
+                                        {t('addProduct', 'Add Product')}
+                                    </Link>
+                                )}
                                 <div className="relative group">
                                     <button className="flex items-center space-x-2 px-3 py-2 text-gray-700 hover:text-emerald-600 rounded-lg transition-all duration-200">
                                         <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-emerald-500">
@@ -307,6 +315,15 @@ function Navbar() {
                                 >
                                     {t('dashboard')}
                                 </Link>
+                                {user.role === 'farmer' && (
+                                    <Link
+                                        to="/add-product"
+                                        onClick={() => setIsOpen(false)}
+                                        className="block px-4 py-3 text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg font-medium transition-all duration-200"
+                                    >
+                                        {t('addProduct', 'Add Product')}
+                                    </Link>
+                                )}
                                 <Link
                                     to="/edit-profile"
                                     onClick={() => setIsOpen(false)}

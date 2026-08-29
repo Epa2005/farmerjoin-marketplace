@@ -92,7 +92,8 @@ const aiRouter = require('./ai-rwanda/routes/ai.routes');
 
 // Import built-in System Assistant router (self-hosted knowledge AI)
 
-const systemAssistantRouter = require('./ai-assistant/routes');
+const systemAssistantRouter = require('./ai-assistant/routes')({ db, auth });
+const systemAssistantKnowledge = require('./ai-assistant/systemKnowledge');
 
 // Import Supabase Storage service
 
@@ -386,6 +387,12 @@ app.use('/api/ai', aiRouter);
 // Mount the built-in System Assistant router (knowledge AI, no external service)
 
 app.use('/api/system-assistant', systemAssistantRouter);
+
+// Ensure dynamic-assistant tables exist (non-fatal on failure).
+
+systemAssistantKnowledge.ensureTables(db)
+    .then(() => console.log('[system-assistant] dynamic knowledge tables ready'))
+    .catch((err) => console.warn('[system-assistant] could not ensure tables:', err && err.message));
 
 // Mount stats router (platform statistics)
 try {

@@ -394,8 +394,8 @@ const FarmerDashboard = () => {
       {/* Modern Header */}
       <header className="relative bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-wrap justify-between items-center gap-3 py-3 min-h-20">
+            <div className="flex flex-wrap items-center space-x-4">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
                   <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -471,9 +471,9 @@ const FarmerDashboard = () => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-3">
               {/* Language Selector */}
-              <div className="relative">
+              <div className="relative order-2 md:order-1">
                 <select
                   value={language}
                   onChange={(e) => changeLanguage(e.target.value)}

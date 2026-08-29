@@ -3,10 +3,18 @@ import { Navigate } from 'react-router-dom';
 
 const ProtectedRoute = ({ children, role }) => {
   const token = localStorage.getItem("token");
-  let user = JSON.parse(localStorage.getItem("user"));
+  let user = null;
+  try {
+    user = JSON.parse(localStorage.getItem("user"));
+  } catch (e) {
+    user = null;
+  }
 
   if (!token) {
     // Not logged in
+    return <Navigate to="/login" replace />;
+  }
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
@@ -27,16 +35,18 @@ const ProtectedRoute = ({ children, role }) => {
   if (!user?.role && token) {
     const payload = parseJwt(token);
     if (payload && payload.role) {
-      user = user || {};
       user.role = payload.role;
     }
   }
 
+  const requiredRoles = Array.isArray(role)
+    ? role.map((r) => String(r).toLowerCase())
+    : [String(role).toLowerCase()];
+
   if (user?.role) {
     const userRole = user.role.toLowerCase();
-    const requiredRole = role.toLowerCase();
 
-    if (userRole !== requiredRole) {
+    if (!requiredRoles.includes(userRole)) {
       // Logged in but wrong role - redirect to appropriate dashboard
       if (userRole === "buyer") {
         return <Navigate to="/buyer-dashboard" replace />;

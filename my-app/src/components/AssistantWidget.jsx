@@ -93,6 +93,22 @@ const AssistantWidget = () => {
         .catch(() => {
           /* offline-safe: keep default chips */
         });
+      // Surface the most recent system change so the assistant visibly
+      // knows what has changed in the platform.
+      API.get("/api/system-assistant/changelog")
+        .then((res) => {
+          const changes = res.data?.changes || [];
+          if (changes.length) {
+            const latest = changes[0];
+            const title = latest.title || "Update";
+            const desc = latest.description ? ` — ${latest.description}` : "";
+            setMessages((prev) => [
+              ...prev,
+              { role: "assistant", content: `**Recent update in the system:** *${title}*${desc}\n\nAsk me "What's new?" for the full list.`, chips: ["What is new?"] },
+            ]);
+          }
+        })
+        .catch(() => {});
     }
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [open, inited]);
@@ -141,7 +157,7 @@ const AssistantWidget = () => {
   return (
     <>
       {open && (
-        <div className="fixed bottom-24 right-4 sm:right-6 z-[100] w-[min(92vw,400px)] max-h-[70vh] rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white flex flex-col" role="dialog" aria-label="FarmerJoin Assistant">
+        <div className="fixed bottom-40 right-4 sm:right-6 z-[100] w-[min(92vw,400px)] max-h-[70vh] rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white flex flex-col" role="dialog" aria-label="FarmerJoin Assistant">
           {/* Header */}
           <div className="bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 flex items-center justify-between text-white">
             <div className="flex items-center gap-2.5">
@@ -242,7 +258,7 @@ const AssistantWidget = () => {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close assistant" : "Open assistant"}
-        className="fixed bottom-5 right-4 sm:right-6 z-[100] w-14 h-14 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-xl flex items-center justify-center hover:scale-105 hover:shadow-2xl transition-all duration-200"
+        className="fixed bottom-24 right-4 sm:right-6 z-[100] w-14 h-14 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-xl flex items-center justify-center hover:scale-105 hover:shadow-2xl transition-all duration-200"
       >
         {open ? (
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

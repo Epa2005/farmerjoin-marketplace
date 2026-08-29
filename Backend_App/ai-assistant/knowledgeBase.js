@@ -117,7 +117,7 @@ const topics = [
   {
     id: 'products',
     title: 'Products & categories',
-    keywords: ['product', 'products', 'category', 'categories', 'list an item', 'listings', 'add a product', 'add product', 'create product', 'good to sell', 'ibicuruzwa', 'ibicuruzwa byiza', 'sale', 'items', 'produit', 'produits', 'categorie', 'catégorie'],
+    keywords: ['product', 'products', 'category', 'categories', 'list an item', 'listings', 'add a product', 'add product', 'create product', 'good to sell', 'ibicuruzwa', 'ibicuruzwa byiza', 'ibyatsi', 'vegetables', 'fruits', 'maize', 'beans', 'potatoes', 'sale', 'items', 'produit', 'produits', 'categorie', 'catégorie'],
     message: (ctx) =>
       `**Products on FarmerJoin**\n\n**Categories available:**\n• **Vegetables** — tomatoes, cabbage, carrots, onions, peppers, spinach...\n• **Fruits** — bananas, mangoes, pineapples, papayas, avocadoes...\n• **Grains** — rice, maize, beans, sorghum, millet...\n• **Livestock** — cattle, goats, sheep, poultry, pigs...\n\n**To add a product (farmers):**\n1. Go to your **Farmer Dashboard**\n2. Open **Add Product**\n3. Fill in name, category, price, quantity, description\n4. Add clear photos and save\n\n**Pricing tips:**\n• Research current market prices\n• Include production, transport and packaging costs\n• Offer bulk discounts for larger orders\n• Update quantity so availability is accurate\n\n**Quality:**\n• Premium / Standard / Economy grades\n• Rwanda Standards Board certification is a plus\n\n${ctx.role && ctx.role !== 'farmer' ? 'Note: only farmers (and cooperatives) can list products.' : ''}`,
     followUps: ['How much should I charge?', 'How do I add photos?', 'How do I edit a product?']
@@ -273,6 +273,14 @@ const topics = [
     message: () =>
       `**Weather and seasons for farming**\n\nRwanda's rainfall is split into:\n• **Season A** (Sept–Dec) — main rains\n• **Season B** (Feb–May) — shorter rains\n• **Season C** (Jun–Aug) — dry season (irrigation helps)\n\nOn the **AgriAI** page you can check **current weather and forecast** for a location and see farming recommendations.\n\nFollow local weather alerts and plant with the season to reduce risk.`,
     followUps: ['How do I check the forecast?', 'What can I plant in the dry season?']
+  },
+  {
+    id: 'systemChangelog',
+    title: 'What is new / recent changes',
+    keywords: ['what is new', 'whats new', "what's new", 'what changed', 'what has changed', 'recent changes', 'latest updates', 'latest update', 'latest', 'system changes', 'new features', 'updates', 'changelog', 'change log', 'news', 'version', 'anything new', 'nouveaute', 'nouveautes', 'nouveaux', 'amahinduka', 'ahinduye', 'byahindutse', 'icgihinduka'],
+    message: () =>
+      `I always keep an eye on what changes inside FarmerJoin, so I can tell you about the latest platform updates.\n\nAsk me "What's new?" at any time and I will list the most recent changes. Maintainers can also teach me new facts at any moment through the admin tools.`,
+    followUps: ['What is new?', 'How do I register?', 'How do I add a product?']
   },
   {
     id: 'market',
