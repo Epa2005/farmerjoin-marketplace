@@ -27,6 +27,7 @@ function Register() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -40,26 +41,73 @@ function Register() {
     }
   }, [success, error]);
 
+  const updateField = (key) => (e) => {
+    const value = key === "phone_number"
+      ? e.target.value.replace(/[^\d]/g, "")
+      : e.target.value;
+    setForm({ ...form, [key]: value });
+    if (fieldErrors[key]) {
+      setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
+    }
+  };
+
+  const getPasswordScore = (pwd) => {
+    let score = 0;
+    if (!pwd) return 0;
+    if (pwd.length >= 8) score++;
+    if (pwd.length >= 12) score++;
+    if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
+    if (/\d/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+    return Math.min(score, 4);
+  };
+
+  const passwordScore = getPasswordScore(form.password);
+  const strengthLabels = ["Too weak", "Weak", "Fair", "Good", "Strong"];
+
+  // Client-side validation mirrors the server rules (security.js)
+  const validateField = (localPhone, fullPhone) => {
+    const errs = {};
+    if (!form.full_name.trim()) {
+      errs.full_name = t('fullNameRequired');
+    } else if (form.full_name.trim().length < 2) {
+      errs.full_name = t('fullNameLength', 'Full name must be at least 2 characters');
+    } else if (!/^[a-zA-Z\s'.-]+$/.test(form.full_name.trim())) {
+      errs.full_name = t('fullNameInvalid', 'Full name can only contain letters, spaces, hyphens, dots, and apostrophes');
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) {
+      errs.email = t('invalidEmail');
+    }
+
+    if (localPhone.length < 6 || !/^\+?[1-9]\d{7,14}$/.test(fullPhone)) {
+      errs.phone = t('invalidPhone');
+    }
+
+    if (form.password.length < 8) {
+      errs.password = t('passwordMinLength') || 'Password must be at least 8 characters long';
+    } else if (!/[A-Z]/.test(form.password)) {
+      errs.password = 'At least one uppercase letter is required';
+    } else if (!/[a-z]/.test(form.password)) {
+      errs.password = 'At least one lowercase letter is required';
+    } else if (!/\d/.test(form.password)) {
+      errs.password = 'At least one number is required';
+    } else if (!/[^A-Za-z0-9]/.test(form.password)) {
+      errs.password = 'At least one special character (e.g. !@#) is required';
+    }
+
+    return errs;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     const localPhone = form.phone_number.replace(/\D/g, "");
     const fullPhone = `${form.country_code}${localPhone}`;
 
-    if (!form.full_name.trim()) {
-      setError(t('fullNameRequired'));
-      return;
-    }
-    if (!/^\S+@\S+\.\S+$/.test(form.email)) {
-      setError(t('invalidEmail'));
-      return;
-    }
-    if (localPhone.length < 6 || !/^\+?[1-9]\d{7,14}$/.test(fullPhone)) {
-      setError(t('invalidPhone'));
-      return;
-    }
-    if (form.password.length < 6) {
-      setError(t('passwordMinLength') || 'Password must be at least 6 characters long');
+    const errs = validateField(localPhone, fullPhone);
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
       return;
     }
 
@@ -67,8 +115,8 @@ function Register() {
 
     try {
       const payload = {
-        full_name: form.full_name,
-        email: form.email,
+        full_name: form.full_name.trim(),
+        email: form.email.trim(),
         phone: fullPhone,
         password: form.password,
         role: form.role
@@ -78,7 +126,7 @@ function Register() {
         const res = await API.post("/auth/register", payload);
         setSuccess(true);
         setTimeout(() => {
-          navigate("/farmer-details", { state: { userId: res.data.user_id, email: form.email } });
+          navigate("/farmer-details", { state: { userId: res.data.user_id, email: form.email.trim() } });
         }, 1500);
       } else {
         payload.role = "buyer";
@@ -90,11 +138,20 @@ function Register() {
       }
     } catch (err) {
       if (err.response?.status === 400 && err.response?.data?.errors) {
-        const validationErrors = err.response.data.errors;
-        const firstError = validationErrors[0]?.msg || 'Validation failed';
-        setError(firstError);
+        const byField = {};
+        err.response.data.errors.forEach((validationError) => {
+          const field = validationError.field || validationError.param;
+          if (field) byField[field] = validationError.msg || validationError.message;
+        });
+        if (Object.keys(byField).length > 0) {
+          setFieldErrors(byField);
+          setError(t('fixFields', 'Please fix the highlighted fields.'));
+        } else {
+          setError(err.response?.data?.message || 'Validation failed');
+        }
       } else if (err.response?.data?.alreadyExists) {
         const isPhone = String(err.response?.data?.message || '').toLowerCase().includes('phone');
+        setFieldErrors({});
         setError(isPhone
           ? (t('phoneAlreadyRegistered') || 'This phone number is already registered. Try signing in instead.')
           : (t('emailAlreadyRegistered') || 'This email is already registered. Try signing in instead.'));
@@ -103,6 +160,7 @@ function Register() {
       } else if (err.code === "ECONNREFUSED") {
         setError(t('cannotConnectToServer') || "Cannot connect to server. Please make sure the backend is running on port 5000.");
       } else {
+        setFieldErrors({});
         const detail = err.response?.data?.detail;
         setError(detail
           ? `${err.response?.data?.message || 'Registration failed'}: ${detail}`
@@ -112,6 +170,11 @@ function Register() {
       setLoading(false);
     }
   };
+
+  const inputClass = (hasError) =>
+    `w-full px-4 py-2.5 sm:py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm sm:text-base ${
+      hasError ? 'border-red-400 bg-red-50' : 'border-gray-300'
+    }`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex items-center justify-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
@@ -135,7 +198,7 @@ function Register() {
             <p className="text-sm sm:text-base text-gray-600">{t('joinMarketplace', 'Join our agricultural marketplace')}</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6" noValidate>
             {success && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl flex items-center space-x-2 text-sm">
                 <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -181,30 +244,33 @@ function Register() {
 
               <div>
                 <label htmlFor="full_name" className="block text-sm font-semibold text-gray-700 mb-1 sm:mb-2">{t('fullName', 'Full Name')}</label>
-                <input id="full_name" type="text" placeholder={t('enterFullName', 'Enter your full name')} className="w-full px-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-sm sm:text-base" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
+                <input id="full_name" type="text" placeholder={t('enterFullName', 'Enter your full name')} className={inputClass(fieldErrors.full_name)} value={form.full_name} onChange={updateField('full_name')} autoComplete="name" />
+                {fieldErrors.full_name && <p className="mt-1 text-xs text-red-600">{fieldErrors.full_name}</p>}
               </div>
 
               <div>
                 <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1 sm:mb-2">{t('emailAddress', 'Email Address')}</label>
-                <input id="email" type="email" placeholder={t('enterEmail') || "Enter your email"} className="w-full px-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-sm sm:text-base" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                <input id="email" type="email" placeholder={t('enterEmail') || "Enter your email"} className={inputClass(fieldErrors.email)} value={form.email} onChange={updateField('email')} autoComplete="email" />
+                {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
               </div>
 
               <div>
                 <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-1 sm:mb-2">{t('phoneNumber', 'Phone Number')}</label>
                 <div className="grid grid-cols-[120px_1fr] sm:grid-cols-[150px_1fr] gap-2 sm:gap-3">
-                  <select id="country_code" className="w-full px-2 sm:px-3 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-white text-sm sm:text-base" value={form.country_code} onChange={(e) => setForm({ ...form, country_code: e.target.value })}>
+                  <select id="country_code" className={`w-full px-2 sm:px-3 py-2.5 sm:py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white text-sm sm:text-base ${fieldErrors.phone ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} value={form.country_code} onChange={(e) => setForm({ ...form, country_code: e.target.value })}>
                     {countryCodes.map((country) => (
                       <option key={country.code} value={country.code}>{country.label}</option>
                     ))}
                   </select>
-                  <input id="phone" type="tel" inputMode="numeric" placeholder={t('enterPhoneNumber') || "Enter your phone number"} className="w-full px-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-sm sm:text-base" value={form.phone_number} onChange={(e) => setForm({ ...form, phone_number: e.target.value.replace(/[^\d]/g, '') })} required />
+                  <input id="phone" type="tel" inputMode="numeric" placeholder={t('enterPhoneNumber') || "Enter your phone number"} className={inputClass(fieldErrors.phone)} value={form.phone_number} onChange={updateField('phone_number')} autoComplete="tel" />
                 </div>
+                {fieldErrors.phone && <p className="mt-1 text-xs text-red-600">{fieldErrors.phone}</p>}
               </div>
 
               <div>
                 <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-1 sm:mb-2">{t('password', 'Password')}</label>
                 <div className="relative">
-                  <input id="password" type={showPassword ? "text" : "password"} placeholder={t('enterPassword', 'Enter your password')} className="w-full px-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all pr-12 text-sm sm:text-base" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+                  <input id="password" type={showPassword ? "text" : "password"} placeholder={t('enterPassword', 'Enter your password')} className={`${inputClass(fieldErrors.password)} pr-12`} value={form.password} onChange={updateField('password')} autoComplete="new-password" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors">
                     {showPassword ? (
                       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -218,6 +284,22 @@ function Register() {
                     )}
                   </button>
                 </div>
+                {form.password.length > 0 && (
+                  <div className="mt-2">
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4].map((level) => (
+                        <div
+                          key={level}
+                          className={`h-1.5 flex-1 rounded-full ${level <= passwordScore ? (passwordScore <= 1 ? 'bg-red-400' : passwordScore === 2 ? 'bg-orange-400' : passwordScore === 3 ? 'bg-yellow-400' : 'bg-emerald-500') : 'bg-gray-200'}`}
+                        />
+                      ))}
+                    </div>
+                    <p className={`mt-1 text-xs ${passwordScore <= 1 ? 'text-red-500' : passwordScore === 2 ? 'text-orange-500' : passwordScore === 3 ? 'text-yellow-600' : 'text-emerald-600'}`}>
+                      {strengthLabels[passwordScore]} — {t('passwordHint', '8+ chars, uppercase, lowercase, number and special character required')}
+                    </p>
+                  </div>
+                )}
+                {fieldErrors.password && !loading && <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>}
               </div>
             </div>
 

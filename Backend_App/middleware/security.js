@@ -52,7 +52,8 @@ const registerLimiter = createRateLimiter(
   'Too many registration attempts from this IP, please try again later.'
 );
 
-// Input validation middleware
+// Input validation middleware. Returns structured, field-level errors:
+//   { success: false, message, errors: [{ field, msg }] }
 const validateInput = (validations) => {
   return async (req, res, next) => {
     await Promise.all(validations.map(validation => validation.run(req)));
@@ -60,13 +61,40 @@ const validateInput = (validations) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
-        message: 'Validation failed',
-        errors: errors.array()
+        success: false,
+        message: 'Please fix the highlighted fields',
+        errors: errors.array().map((error) => ({
+          field: error.path || error.param,
+          msg: error.msg
+        }))
       });
     }
     next();
   };
 };
+
+// Reusable field rules
+const emailRule = body('email')
+  .trim()
+  .isEmail()
+  .withMessage('Please provide a valid email address')
+  .isLength({ max: 254 })
+  .withMessage('Email address is too long')
+  .normalizeEmail();
+
+const passwordPolicyMessage = 'Password must be 8-72 characters long and include at least one uppercase letter, one lowercase letter, one number, and one special character';
+
+const strongPasswordRule = body('password')
+  .isLength({ min: 8, max: 72 })
+  .withMessage('Password must be between 8 and 72 characters long')
+  .isStrongPassword({
+    minLength: 8,
+    minLowercase: 1,
+    minUppercase: 1,
+    minNumbers: 1,
+    minSymbols: 1
+  })
+  .withMessage(passwordPolicyMessage);
 
 // User registration validation
 const validateRegistration = [
@@ -74,13 +102,10 @@ const validateRegistration = [
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage('Full name must be between 2 and 100 characters')
-    .matches(/^[a-zA-Z\s'-]+$/)
-    .withMessage('Full name can only contain letters, spaces, hyphens, and apostrophes'),
+    .matches(/^[a-zA-Z\s'.-]+$/)
+    .withMessage('Full name can only contain letters, spaces, hyphens, dots, and apostrophes'),
 
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email address'),
+  emailRule,
 
   body('phone')
     .matches(/^\+?[1-9]\d{7,14}$/)
@@ -91,21 +116,49 @@ const validateRegistration = [
     .isIn(['buyer', 'farmer', 'cooperative'])
     .withMessage('Role must be one of: buyer, farmer, cooperative'),
 
-  body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long')
+  strongPasswordRule
 ];
 
 // User login validation
 const validateLogin = [
   body('email')
+    .trim()
     .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email address'),
+    .withMessage('Please provide a valid email address')
+    .isLength({ max: 254 })
+    .withMessage('Email address is too long')
+    .normalizeEmail(),
 
   body('password')
     .notEmpty()
     .withMessage('Password is required')
+    .isLength({ max: 72 })
+    .withMessage('Password is too long')
+];
+
+// Password reset validation (forgot-password flow)
+const validatePasswordReset = [
+  body('email')
+    .trim()
+    .isEmail()
+    .withMessage('Please provide a valid email address')
+    .normalizeEmail(),
+
+  body('newPassword')
+    .isLength({ min: 8, max: 72 })
+    .withMessage('Password must be between 8 and 72 characters long')
+    .isStrongPassword({
+      minLength: 8,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 1
+    })
+    .withMessage(passwordPolicyMessage),
+
+  body('resetToken')
+    .notEmpty()
+    .withMessage('Reset token is required')
 ];
 
 // Product validation
@@ -269,6 +322,7 @@ module.exports = {
   validateInput,
   validateRegistration,
   validateLogin,
+  validatePasswordReset,
   validateProduct,
   helmetConfig,
   corsOptions,

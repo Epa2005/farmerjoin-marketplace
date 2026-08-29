@@ -320,6 +320,8 @@ const {
 
     validateLogin,
 
+    validatePasswordReset,
+
     validateProduct,
 
     helmetConfig,
@@ -1012,6 +1014,7 @@ app.post("/auth/register", registerLimiter, validateInput(validateRegistration),
                     console.log(`Registration blocked: ${collided} already registered (${collided === 'email' ? email : phone})`);
 
                     return res.status(409).json({
+                        success: false,
                         message: collided === 'email'
                             ? 'Email already registered'
                             : 'Phone number already registered',
@@ -1053,7 +1056,7 @@ app.post("/auth/register", registerLimiter, validateInput(validateRegistration),
                                 if (err.code === '23505' || err.code === 'ER_DUP_ENTRY' || err.errno === 1062) {
                                     console.warn(`Concurrent duplicate registration blocked: ${email}`);
                                     return db.rollback(() => {
-                                        res.status(409).json({ message: 'Email already registered', alreadyExists: true });
+                                        res.status(409).json({ success: false, message: 'Email already registered', alreadyExists: true });
                                     });
                                 }
                                 console.error('User insertion error:', err);
@@ -1120,6 +1123,7 @@ console.error('Profile insertion error:', err);
                                     console.log(`New ${storedRole} registered: ${email}, User ID: ${userId}`);
 
                                     res.status(201).json({
+                                        success: true,
                                         message: storedRole === 'farmer' ? "Farmer registration successful" : (storedRole === 'cooperative' ? "Cooperative registration successful" : "Buyer registration successful"),
                                         user_id: userId,
                                         role: storedRole
@@ -1135,7 +1139,7 @@ console.error('Profile insertion error:', err);
     } catch (error) {
         console.error('Registration error:', error);
         try { db.rollback(); } catch (_rollbackErr) { /* ignore */ }
-        return res.status(500).json({ message: 'Registration failed' });
+        return res.status(500).json({ success: false, message: 'Registration failed' });
     }
 });
 
@@ -1172,45 +1176,34 @@ app.post("/auth/login", loginLimiter, validateInput(validateLogin), (req, res) =
 
     const { email, password } = req.body;
 
+    // Normalize before querying so case mismatches never block login
+    const normalizedEmail = String(email || '').trim().toLowerCase();
 
-
-    db.query("SELECT * FROM users WHERE email=?", [email], async (err, result) => {
+    db.query("SELECT * FROM users WHERE LOWER(email)=?", [normalizedEmail], async (err, result) => {
 
         if (err) {
 
             console.error('Database error:', err);
 
-            return res.status(500).json({ message: 'Database error' });
+            return res.status(500).json({ success: false, message: 'Database error' });
 
         }
 
-
-
-        console.log('LOGIN ATTEMPT - Email:', email);
+        console.log('LOGIN ATTEMPT - Email:', normalizedEmail);
 
         console.log('LOGIN ATTEMPT - Users found:', result.length);
 
-
-
         if (result.length === 0) {
 
-            // Log failed login attempt
+            // Log failed login attempt (no account enumeration)
 
-            console.warn(`Failed login attempt for email: ${email}`);
+            console.warn(`Failed login attempt for email: ${normalizedEmail}`);
 
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ success: false, message: 'Invalid email or password' });
 
         }
 
-
-
         const user = result[0];
-
-        console.log('LOGIN ATTEMPT - User found:', user);
-
-        console.log('LOGIN ATTEMPT - Stored password hash:', user.password);
-
-
 
         try {
 
@@ -1218,15 +1211,11 @@ app.post("/auth/login", loginLimiter, validateInput(validateLogin), (req, res) =
 
             if (!validPassword) {
 
-                // Log failed login attempt
+                console.warn(`Failed login attempt for email: ${normalizedEmail}`);
 
-                console.warn(`Failed login attempt for email: ${email}`);
-
-                return res.status(401).json({ message: 'Invalid credentials' });
+                return res.status(401).json({ success: false, message: 'Invalid email or password' });
 
             }
-
-
 
             // Generate JWT token with expiration
 
@@ -1248,11 +1237,9 @@ app.post("/auth/login", loginLimiter, validateInput(validateLogin), (req, res) =
 
             );
 
+            // Log successful login (never log password/hash)
 
-
-            // Log successful login
-
-            console.log(`User logged in: ${email}, Role: ${user.role}`);
+            console.log(`User logged in: ${normalizedEmail}, Role: ${user.role}`);
 
             db.query(
                 "UPDATE users SET last_seen = NOW(), is_online = ? WHERE user_id = ?",
@@ -1264,10 +1251,8 @@ app.post("/auth/login", loginLimiter, validateInput(validateLogin), (req, res) =
                 }
             );
 
-
-
             res.json({
-
+                success: true,
                 token,
 
                 user: {
@@ -1286,7 +1271,7 @@ app.post("/auth/login", loginLimiter, validateInput(validateLogin), (req, res) =
 
             console.error('Password comparison error:', compareError);
 
-            return res.status(500).json({ message: 'Authentication error' });
+            return res.status(500).json({ success: false, message: 'Authentication error' });
 
         }
 
@@ -1448,27 +1433,11 @@ app.post("/auth/forgot-password/verify", (req, res) => {
 
 // FORGOT PASSWORD - STEP 2: Reset password (for buyers, farmers, and cooperatives)
 
-app.post("/auth/forgot-password/reset", (req, res) => {
+app.post("/auth/forgot-password/reset", validatePasswordReset, (req, res) => {
 
-    const { email, newPassword, resetToken } = req.body;
+    const { email, newPassword } = req.body;
 
-
-
-    if (!email || !newPassword || !resetToken) {
-
-        return res.status(400).json({ message: "Email, new password, and reset token are required" });
-
-    }
-
-
-
-    if (newPassword.length < 6) {
-
-        return res.status(400).json({ message: "Password must be at least 6 characters long" });
-
-    }
-
-
+    const normalizedEmail = String(email || '').trim().toLowerCase();
 
     // Hash new password
 
@@ -1478,7 +1447,7 @@ app.post("/auth/forgot-password/reset", (req, res) => {
 
             console.error("Error hashing password:", hashErr);
 
-            return res.status(500).json({ message: "Error processing password" });
+            return res.status(500).json({ success: false, message: "Error processing password" });
 
         }
 
@@ -1488,9 +1457,9 @@ app.post("/auth/forgot-password/reset", (req, res) => {
 
         db.query(
 
-            "UPDATE users SET password = ? WHERE email = ? AND role IN ('buyer', 'farmer', 'cooperative')",
+            "UPDATE users SET password = ? WHERE LOWER(email) = ? AND role IN ('buyer', 'farmer', 'cooperative')",
 
-            [hashedPassword, email],
+            [hashedPassword, normalizedEmail],
 
             (updateErr, result) => {
 
@@ -1498,21 +1467,19 @@ app.post("/auth/forgot-password/reset", (req, res) => {
 
                     console.error("Error updating password:", updateErr);
 
-                    return res.status(500).json({ message: "Error updating password" });
+                    return res.status(500).json({ success: false, message: "Error updating password" });
 
                 }
-
-
 
                 if (result.affectedRows === 0) {
 
-                    return res.status(404).json({ message: "User not found" });
+                    return res.status(404).json({ success: false, message: "User not found" });
 
                 }
 
-
-
                 res.json({
+
+                    success: true,
 
                     message: "Password reset successfully! You can now login with your new password."
 

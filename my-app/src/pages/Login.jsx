@@ -10,6 +10,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -18,24 +19,10 @@ function Login() {
     setError("");
 
     try {
-      const res = await API.post("/auth/login", { email, password });
-
-      console.log("Login API Response:", res.data);
-      console.log("Response structure:", {
-        hasToken: !!res.data?.token,
-        hasAccessToken: !!res.data?.access_token,
-        hasUser: !!res.data?.user,
-        userRole: res.data?.user?.role,
-        directUserRole: res.data?.role,
-        fullUser: res.data?.user,
-        fullResponse: res.data
-      });
+      const res = await API.post("/auth/login", { email: email.trim(), password });
 
       const token = res.data?.token || res.data?.access_token;
       let user = res.data?.user || (res.data && typeof res.data === 'object' ? res.data : null);
-
-      console.log("Extracted user data:", user);
-      console.log("User role:", user?.role);
 
       // If backend returns token but not user role, decode JWT to extract role
       const parseJwt = (t) => {
@@ -63,38 +50,55 @@ function Login() {
       if (token && user) {
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(user));
-        // Notify current window components (Navbar) that user data changed
         try {
           window.dispatchEvent(new CustomEvent('userUpdated', { detail: user }));
         } catch (e) { }
 
-        // Navigate based on role
-        let targetRoute = "/dashboard"; // Default to dashboard for farmers and cooperatives
+        let targetRoute = "/dashboard";
         const userRole = (user.role || "").toLowerCase();
-
-        console.log("Navigating to:", targetRoute, "for role:", userRole);
-
         if (userRole === "buyer") targetRoute = "/buyer-dashboard";
         else if (userRole === "farmer") targetRoute = "/dashboard";
-        else if (userRole === "cooperative") targetRoute = "/dashboard"; // Cooperatives also use the main dashboard
+        else if (userRole === "cooperative") targetRoute = "/dashboard";
         else if (userRole === "sub_admin") targetRoute = "/sub-admin-dashboard";
         else if (userRole === "admin") targetRoute = "/admin-dashboard";
-        else targetRoute = "/dashboard"; // Default to dashboard for any farmer-like role
+        else targetRoute = "/dashboard";
 
-        console.log("Final target route:", targetRoute);
         navigate(targetRoute, { replace: true });
       } else {
         console.error("Invalid login response - missing token or user");
         setError("Invalid login response");
       }
     } catch (err) {
-      console.error("Login error:", err);
-      console.error("Error response:", err.response?.data);
-      setError(err.response?.data?.message || "Login failed");
+      if (err.response?.status === 400 && err.response?.data?.errors) {
+        const byField = {};
+        err.response.data.errors.forEach((validationError) => {
+          const field = validationError.field || validationError.param;
+          if (field) byField[field] = validationError.msg || validationError.message;
+        });
+        if (Object.keys(byField).length > 0) {
+          setFieldErrors(byField);
+          setError(t('fixFields', 'Please fix the highlighted fields.'));
+        } else {
+          setError(err.response?.data?.message || "Login failed");
+        }
+      } else if (err.response?.status === 401) {
+        setFieldErrors({});
+        setError("Invalid email or password");
+      } else if (err.response?.status === 0) {
+        setError(t('networkError') || "Network error: Unable to connect to server. Please check your connection.");
+      } else {
+        setFieldErrors({});
+        setError(err.response?.data?.message || err.message || "Login failed");
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  const inputClass = (hasError) =>
+    `w-full px-4 py-2.5 sm:py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-sm sm:text-base ${
+      hasError ? 'border-red-400 bg-red-50' : 'border-gray-300'
+    }`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 relative overflow-hidden">
@@ -139,23 +143,31 @@ function Login() {
                   <label className="block text-sm font-semibold text-gray-700 mb-1 sm:mb-2">{t('emailAddress', 'Email Address')}</label>
                   <input
                     type="email"
-                    required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                    }}
                     placeholder="farmer@farm.com"
-                    className="w-full px-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-sm sm:text-base"
+                    autoComplete="email"
+                    className={inputClass(fieldErrors.email)}
                   />
+                  {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1 sm:mb-2">{t('password', 'Password')}</label>
                   <input
                     type="password"
-                    required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                    }}
                     placeholder={t('enterPassword', 'Enter your password')}
-                    className="w-full px-4 py-2.5 sm:py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all text-sm sm:text-base"
+                    autoComplete="current-password"
+                    className={inputClass(fieldErrors.password)}
                   />
+                  {fieldErrors.password && <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>}
                 </div>
               </div>
 
