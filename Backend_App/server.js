@@ -968,206 +968,167 @@ const isAdmin = (req, res, next) => {
 
 
 
-// REGISTER with security improvements - Buyer Only Registration (temporarily without validation)
+// REGISTER with thorough server-side validation.
+// Emails are normalized (trimmed + lowercased) and all existing-account
+// checks are case-insensitive, so registered emails can never be duplicated
+// with different casing on Postgres/Supabase.
 
-app.post("/auth/register", registerLimiter, async (req, res) => {
+app.post("/auth/register", registerLimiter, validateInput(validateRegistration), async (req, res) => {
 
-    console.log('=== REGISTRATION REQUEST ===');
+    try {
 
-    console.log('Request body:', req.body);
+        let { full_name, email, phone, password, role: requestedRole } = req.body;
 
-    console.log('Request headers:', req.headers);
+        // Normalize inputs
+        full_name = String(full_name || '').trim();
+        email = String(email || '').trim().toLowerCase();
+        phone = String(phone || '').trim().replace(/\s+/g, '');
 
+        // Allow role from request; default to buyer for safety, only allow 'buyer', 'farmer' or 'cooperative'
+        const role = (requestedRole === 'farmer' || requestedRole === 'cooperative') ? requestedRole : 'buyer';
 
+        console.log('Processing registration:', { full_name, email, phone, role });
 
-    const { full_name, email, phone, password, role: requestedRole } = req.body;
+        // Check if a user with this email or phone already exists (case-insensitive email)
+        db.query(
+            "SELECT user_id, email FROM users WHERE LOWER(email) = ? OR phone = ?",
+            [email, phone],
+            async (err, existingUser) => {
 
+                if (err) {
 
+                    console.error('Database error while checking duplicates:', err);
 
-    // Basic validation
+                    return res.status(500).json({ message: 'Database error' });
 
-    if (!full_name || !email || !phone || !password) {
+                }
 
-        console.log('Missing required fields:', { full_name: !!full_name, email: !!email, phone: !!phone, password: !!password });
+                if (existingUser.length > 0) {
 
-        return res.status(400).json({ message: 'All fields are required' });
+                    const existing = existingUser.find(u => String(u.email || '').toLowerCase() === email) || existingUser[0];
 
-    }
+                    const collided = String(existing.email || '').toLowerCase() === email ? 'email' : 'phone';
 
-    // Allow role from request; default to buyer for safety, only allow 'buyer', 'farmer' or 'cooperative'
+                    console.log(`Registration blocked: ${collided} already registered (${collided === 'email' ? email : phone})`);
 
-    const role = (requestedRole === 'farmer' || requestedRole === 'cooperative') ? requestedRole : 'buyer';
+                    return res.status(409).json({
+                        message: collided === 'email'
+                            ? 'Email already registered'
+                            : 'Phone number already registered',
+                        alreadyExists: true
+                    });
+                }
 
-    console.log('Processing registration for:', { full_name, email, phone, role });
+                // Hash password with secure rounds
+                const bcryptRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
 
+                const hashed = await bcrypt.hash(password, bcryptRounds);
 
+                // Start transaction for data consistency
+                db.beginTransaction(async (txErr) => {
 
-    // Check if user already exists
+                    if (txErr) {
 
-    db.query("SELECT user_id FROM users WHERE email = ?", [email], async (err, existingUser) => {
+                        console.error('Transaction error:', txErr);
 
-        if (err) {
+                        return res.status(500).json({ message: 'Database error' });
 
-            console.error('Database error:', err);
+                    }
 
-            return res.status(500).json({ message: 'Database error' });
-
-        }
-
-
-
-        if (existingUser.length > 0) {
-
-            console.log('Email already registered:', email);
-
-            return res.status(409).json({ message: 'Email already registered' });
-
-        }
-
-
-
-        // Hash password with secure rounds
-
-        const bcryptRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
-
-        const hashed = await bcrypt.hash(password, bcryptRounds);
-
-
-
-        // Start transaction for data consistency
-
-        db.beginTransaction(async (err) => {
-
-            if (err) {
-
-                console.error('Transaction error:', err);
-
-                return res.status(500).json({ message: 'Database error' });
-
-            }
-
-
-
-            try {
-
-                // Insert user
-
-                db.query(
-
-                    "INSERT INTO users (full_name,email,phone,password,role,created_at) VALUES (?,?,?,?,?,NOW())",
-
-                    [full_name, email, phone, hashed, role],
-
-                    (err, result) => {
-
-                        if (err) {
-
-                            console.error('User insertion error:', err);
-
-                            return db.rollback(() => {
-
-                                res.status(500).json({ message: 'Registration failed' });
-
-                            });
-
-                        }
-
-
-
-                        const userId = result.insertId;
-
-                        console.log('User created with ID:', userId);
-
-                        // Refresh role from the inserted row so it matches the stored row role
-                        let storedRole = result.rows && result.rows.length > 0 ? (result.rows[0].role || role) : role;
-
-                        // Keep profile creation compatible with databases that do not yet
-                        // include the newer farmers.created_at column.
-                        const profileQuery = (storedRole === 'farmer' || storedRole === 'cooperative')
-                            ? (storedRole === 'cooperative'
-                                ? "INSERT INTO cooperatives (user_id) VALUES (?)"
-                                : "INSERT INTO farmers (user_id, farm_name) VALUES (?, ?)")
-                            : "INSERT INTO buyers (user_id) VALUES (?)";
-
-                        let profileParams;
-                        if (storedRole === 'cooperative') {
-                            profileParams = [userId];
-                        } else if (storedRole === 'farmer') {
-                            profileParams = [userId, `${full_name}'s Farm`];
-                        } else {
-                            profileParams = [userId];
-                        }
-
-                        db.query(profileQuery, profileParams, (err) => {
+                    // Insert user
+                    db.query(
+                        "INSERT INTO users (full_name,email,phone,password,role,created_at) VALUES (?,?,?,?,?,NOW())",
+                        [full_name, email, phone, hashed, role],
+                        (err, result) => {
 
                             if (err) {
-
-                                console.error('Profile insertion error:', err);
-
+                                // Race condition: another request created this account between our
+                                // check and this insert (Postgres 23505 / MySQL ER_DUP_ENTRY).
+                                if (err.code === '23505' || err.code === 'ER_DUP_ENTRY' || err.errno === 1062) {
+                                    console.warn(`Concurrent duplicate registration blocked: ${email}`);
+                                    return db.rollback(() => {
+                                        res.status(409).json({ message: 'Email already registered', alreadyExists: true });
+                                    });
+                                }
+                                console.error('User insertion error:', err);
                                 return db.rollback(() => {
-
-                                    res.status(500).json({ message: 'Profile creation failed' });
-
+                                    res.status(500).json({ message: 'Registration failed' });
                                 });
-
                             }
 
+                            const userId = result.insertId;
 
+                            console.log('User created with ID:', userId);
 
-                            db.commit((commitErr) => {
+                            // Refresh role from the inserted row so it matches the stored row role
+                            let storedRole = result.rows && result.rows.length > 0 ? (result.rows[0].role || role) : role;
 
-                                if (commitErr) {
+                            // Keep profile creation compatible with databases that do not yet
+                            // include the newer farmers.created_at column.
+                            const profileQuery = (storedRole === 'farmer' || storedRole === 'cooperative')
+                                ? (storedRole === 'cooperative'
+                                    ? "INSERT INTO cooperatives (user_id) VALUES (?)"
+                                    : "INSERT INTO farmers (user_id, farm_name) VALUES (?, ?)")
+                                : "INSERT INTO buyers (user_id) VALUES (?)";
 
-                                    console.error('Commit error:', commitErr);
+                            let profileParams;
+                            if (storedRole === 'cooperative') {
+                                profileParams = [userId];
+                            } else if (storedRole === 'farmer') {
+                                profileParams = [userId, `${full_name}'s Farm`];
+                            } else {
+                                profileParams = [userId];
+                            }
+
+                            db.query(profileQuery, profileParams, (err) => {
+
+                                if (err) {
+
+                                    console.error('Profile insertion error:', err);
 
                                     return db.rollback(() => {
 
-                                        res.status(500).json({ message: 'Registration failed' });
+                                        res.status(500).json({ message: 'Profile creation failed' });
 
                                     });
 
                                 }
 
+                                db.commit((commitErr) => {
 
+                                    if (commitErr) {
 
-                                // Log security event
+                                        console.error('Commit error:', commitErr);
 
-                                console.log(`New ${storedRole} registered: ${email}, User ID: ${userId}`);
+                                        return db.rollback(() => {
 
+                                            res.status(500).json({ message: 'Registration failed' });
 
+                                        });
 
-                                res.status(201).json({
+                                    }
 
-                                    message: storedRole === 'farmer' ? "Farmer registration successful" : (storedRole === 'cooperative' ? "Cooperative registration successful" : "Buyer registration successful"),
+                                    // Log security event
+                                    console.log(`New ${storedRole} registered: ${email}, User ID: ${userId}`);
 
-                                    user_id: userId,
-
-                                    role: storedRole
-
+                                    res.status(201).json({
+                                        message: storedRole === 'farmer' ? "Farmer registration successful" : (storedRole === 'cooperative' ? "Cooperative registration successful" : "Buyer registration successful"),
+                                        user_id: userId,
+                                        role: storedRole
+                                    });
                                 });
 
                             });
-
-                        });
-
-                    }
-
-                );
-
-            } catch (error) {
-
-                console.error('Registration error:', error);
-
-                db.rollback();
-
-                res.status(500).json({ message: 'Registration failed' });
-
+                        }
+                    );
+                });
             }
-
-        });
-
-    });
-
+        );
+    } catch (error) {
+        console.error('Registration error:', error);
+        try { db.rollback(); } catch (_rollbackErr) { /* ignore */ }
+        return res.status(500).json({ message: 'Registration failed' });
+    }
 });
 
 // Update farmer details after registration (location, farm name, bio, etc.)
@@ -1413,7 +1374,7 @@ app.post("/auth/forgot-password/verify", (req, res) => {
 
     db.query(
 
-        "SELECT * FROM users WHERE email = ? AND role IN ('buyer', 'farmer', 'cooperative')",
+        "SELECT * FROM users WHERE LOWER(email) = ? AND role IN ('buyer', 'farmer', 'cooperative')",
 
         [email],
 

@@ -93,8 +93,11 @@ function Register() {
         const validationErrors = err.response.data.errors;
         const firstError = validationErrors[0]?.msg || 'Validation failed';
         setError(firstError);
-      } else if (err.response?.data?.message === "Email already registered") {
-        setError(t('emailAlreadyRegistered') || "This email is already registered");
+      } else if (err.response?.data?.alreadyExists) {
+        const isPhone = String(err.response?.data?.message || '').toLowerCase().includes('phone');
+        setError(isPhone
+          ? (t('phoneAlreadyRegistered') || 'This phone number is already registered. Try signing in instead.')
+          : (t('emailAlreadyRegistered') || 'This email is already registered. Try signing in instead.'));
       } else if (err.response?.status === 0) {
         setError(t('networkError') || "Network error: Unable to connect to server. Please check your connection.");
       } else if (err.code === "ECONNREFUSED") {
