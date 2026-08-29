@@ -1052,7 +1052,7 @@ app.post("/auth/register", registerLimiter, validateInput(validateRegistration),
                                 }
                                 console.error('User insertion error:', err);
                                 return db.rollback(() => {
-                                    res.status(500).json({ message: 'Registration failed' });
+                                    res.status(500).json({ message: 'Registration failed', detail: err.message });
                                 });
                             }
 
@@ -1084,13 +1084,13 @@ app.post("/auth/register", registerLimiter, validateInput(validateRegistration),
 
                                 if (err) {
 
-                                    console.error('Profile insertion error:', err);
+console.error('Profile insertion error:', err);
 
-                                    return db.rollback(() => {
+                                return db.rollback(() => {
 
-                                        res.status(500).json({ message: 'Profile creation failed' });
+                                    res.status(500).json({ message: 'Profile creation failed', detail: err.message });
 
-                                    });
+                                });
 
                                 }
 
