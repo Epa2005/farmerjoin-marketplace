@@ -1,0 +1,37 @@
+.navbar1 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #2e8b57;
+    padding: 10px 20px;
+}
+
+.logo {
+    color: white;
+}
+
+.nav-links {
+    list-style: none;
+    display: flex;
+    gap: 20px;
+}
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.nav-links a:hover {
+    text-decoration: underline;
+}
+
+.navbar1 {
+    display: flex;
+    justify-content: center;
+    /* horizontal center */
+    align-items: center;
+    /* vertical center */
+    width: 200vh;
+    /* full screen height */
+}

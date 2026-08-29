@@ -1,0 +1,8 @@
+.navbar {
+    display: flex;
+    /* horizontal center */
+    align-items: center;
+    /* vertical center */
+    width: 200vh;
+    /* full screen height */
+}

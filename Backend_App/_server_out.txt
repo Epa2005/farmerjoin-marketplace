@@ -1,0 +1,772 @@
+◇ injected env (17) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+Database mode: PostgreSQL (Supabase)
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+Mounted /stats router
+Initializing ML model...
+Serving client build from C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\my-app\build
+ FarmerJoin Server running on port 5000
+ Local Access: http://localhost:5000
+ Network Access: http://0.0.0.0:5000
+ Admin: hirwa@farmerjoin.com / hirwa
+ Farmers can login and access their dashboards
+ ML Learning System: Enhanced with Internet Data
+ Internet Sources: Weather, Market Prices, Farming News, Crop Calendar
+🌾 Farmers can login and access their dashboards
+🤖 ML Learning System: Enhanced with Internet Data
+🌐 Internet Sources: Weather, Market Prices, Farming News, Crop Calendar
+PostgreSQL connected successfully
+Enhanced ML interactions table created/verified with users FK
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+Products query results: 10 products
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+Products query results: 10 products
+Products query results: 10 products
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+Products query results: 10 products
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+Products query results: 10 products
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+Products query results: 10 products
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+Products query results: 10 products
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+Products query results: 10 products
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+Products query results: 10 products
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+Products query results: 10 products
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+Products query results: 10 products
+Products query results: 10 products
+Products query results: 10 products
+LOGIN ATTEMPT - Email: epa123@gmail.com
+LOGIN ATTEMPT - Users found: 1
+LOGIN ATTEMPT - User found: {
+  user_id: 109,
+  full_name: 'epa1',
+  email: 'epa123@gmail.com',
+  phone: '0785018691',
+  password: '$2b$10$VUZvqRq7dozJuLPms5CH/.rZXOIQsEMTQy2CZlPvV4dOdC2.q1KI6',
+  role: 'admin',
+  created_at: 2026-04-11T00:02:05.000Z,
+  photo: 'uploads/profiles/profile-1779185619237-539664825.png',
+  status: 'active',
+  banned_by: null,
+  banned_at: null,
+  suspended_by: null,
+  suspended_at: null,
+  suspension_reason: null,
+  ban_reason: null,
+  managed_by: null,
+  assigned_location: null,
+  location: null,
+  province: null,
+  district: null,
+  sector: null
+}
+LOGIN ATTEMPT - Stored password hash: $2b$10$VUZvqRq7dozJuLPms5CH/.rZXOIQsEMTQy2CZlPvV4dOdC2.q1KI6
+User logged in: epa123@gmail.com, Role: admin
+ADMIN FARMERS RETRIEVED: 9 farmers
+ADMIN ORDERS RETRIEVED: 7 orders
+ADMIN FARMERS RETRIEVED: 9 farmers
+ADMIN ORDERS RETRIEVED: 7 orders
+PRODUCTS ENDPOINT - farmer_id from query: undefined
+PRODUCTS - Final query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+PRODUCTS - Final params: []
+simpleAuth called, authHeader: exists
+Token: eyJhbGciOiJIUzI1NiIs...
+JWT_SECRET: dev_jwt_secret_change_me
+Decoded token: {
+  user_id: 109,
+  role: 'admin',
+  email: 'epa123@gmail.com',
+  iat: 1779539084,
+  exp: 1780143884
+}
+Cart items fetched for buyer: 109 []
+simpleAuth called, authHeader: exists
+Token: eyJhbGciOiJIUzI1NiIs...
+JWT_SECRET: dev_jwt_secret_change_me
+Decoded token: {
+  user_id: 109,
+  role: 'admin',
+  email: 'epa123@gmail.com',
+  iat: 1779539084,
+  exp: 1780143884
+}
+Cart items fetched for buyer: 109 []
+Products query results: 10 products

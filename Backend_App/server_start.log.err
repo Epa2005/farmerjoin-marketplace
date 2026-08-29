@@ -1,0 +1,135 @@
+Warning: connect.session() MemoryStore is not
+designed for a production environment, as it will leak
+memory, and will not scale past a single process.
+PostgreSQL connection failed: Connection terminated due to connection timeout
+Error checking users table existence: Error: Connection terminated due to connection timeout
+    at C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\Backend_App\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\Backend_App\dbConnection.js:137:32 {
+  [cause]: Error: Connection terminated unexpectedly
+      at Connection.<anonymous> (C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\Backend_App\node_modules\pg\lib\client.js:180:73)
+      at Object.onceWrapper (node:events:632:28)
+      at Connection.emit (node:events:518:28)
+      at Socket.<anonymous> (C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\Backend_App\node_modules\pg\lib\connection.js:61:12)
+      at Socket.emit (node:events:530:35)
+      at TCP.<anonymous> (node:net:351:12)
+}
+Presence columns check failed: Connection terminated due to connection timeout
+PostgreSQL client error: Connection terminated unexpectedly
+Database error: Error: Connection terminated unexpectedly
+    at C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\Backend_App\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\Backend_App\dbConnection.js:137:32
+Failed query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+Failed params: []
+Database error: Error: Connection terminated due to connection timeout
+    at C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\Backend_App\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\Backend_App\dbConnection.js:137:32 {
+  [cause]: Error: Connection terminated unexpectedly
+      at Connection.<anonymous> (C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\Backend_App\node_modules\pg\lib\client.js:180:73)
+      at Object.onceWrapper (node:events:632:28)
+      at Connection.emit (node:events:518:28)
+      at Socket.<anonymous> (C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\Backend_App\node_modules\pg\lib\connection.js:61:12)
+      at Socket.emit (node:events:530:35)
+      at TCP.<anonymous> (node:net:351:12)
+}
+Failed query: 
+
+        SELECT 
+
+            p.*,
+
+            u.full_name as farmer_name,
+
+            u.email as farmer_email,
+
+            u.phone as farmer_phone,
+
+            f.location as farm_location,
+
+            f.farm_name,
+
+            COALESCE(ps.times_ordered, 0) as times_ordered,
+
+            COALESCE(ps.units_sold, 0) as units_sold
+
+        FROM products p
+
+        LEFT JOIN farmers f ON p.farmer_id = f.farmer_id
+
+        LEFT JOIN users u ON f.user_id = u.user_id
+
+        LEFT JOIN (
+
+            SELECT
+
+                oi.product_id,
+
+                COUNT(DISTINCT oi.order_id) as times_ordered,
+
+                COALESCE(SUM(oi.quantity), 0) as units_sold
+
+            FROM order_items oi
+
+            GROUP BY oi.product_id
+
+        ) ps ON p.product_id = ps.product_id
+
+        WHERE u.role = 'farmer'
+
+          AND LOWER(COALESCE(u.status, 'inactive')) = 'active'
+
+     ORDER BY p.created_at DESC
+Failed params: []
+PostgreSQL client error: Connection terminated unexpectedly
+Database error: Error: Connection terminated unexpectedly
+    at C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\Backend_App\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async C:\Users\Student\Downloads\farmerjoin-marketplace-main\farmerjoin-marketplace-main\Backend_App\dbConnection.js:137:32

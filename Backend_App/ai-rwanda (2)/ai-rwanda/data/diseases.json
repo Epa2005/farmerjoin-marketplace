@@ -1,0 +1,137 @@
+{
+  "banana": {
+    "bunchy_top": {
+      "name": { "en": "Banana Bunchy Top Disease", "rw": "Indwara y'Igitoki Bunchy Top" },
+      "symptoms": { "en": "Stunted growth, brittle leaves, dark green streaks on leaves", "rw": "Igitoki kigufi, amababi yoroshye gucika, imirongo y'icyatsi cyijimye ku mababi" },
+      "treatment": { "en": "Remove infected plants, control aphids with neem or imidacloprid, use disease-free planting material", "rw": "Kura ibimera byanduye, rwanya udukoko (aphids) ukoresheje neem cyangwa imidacloprid" },
+      "prevention": { "en": "Use clean planting material from RAB-certified nurseries, quarantine new plants, monitor weekly", "rw": "Koresha imbuto zifite icyemezo cya RAB, isuzume buri cyumweru" },
+      "severity": "high"
+    },
+    "xanthomonas_wilt": {
+      "name": { "en": "Banana Xanthomonas Wilt (BXW)", "rw": "BXW - Indwara ikaze y'Igitoki" },
+      "symptoms": { "en": "Yellowing and wilting of leaves, premature ripening, yellow bacterial ooze when stem cut", "rw": "Amababi ahinduka umuhondo akuma, imbuto zihuta gushya" },
+      "treatment": { "en": "Remove and burn infected plants, disinfect tools with bleach, remove male buds", "rw": "Kura wenyamira ibimera byanduye, oza ibikoresho na javel" },
+      "prevention": { "en": "Single-stem removal, disinfect cutting tools, no shared tools between farms", "rw": "Oza inkota mbere yo gukora ku gindi gitoki" },
+      "severity": "high"
+    },
+    "black_sigatoka": {
+      "name": { "en": "Black Sigatoka", "rw": "Sigatoka y'umukara" },
+      "symptoms": { "en": "Black streaks on leaves leading to leaf death, reduced fruit quality", "rw": "Imirongo y'umukara ku mababi" },
+      "treatment": { "en": "Apply copper-based or systemic fungicides every 2 weeks, remove infected leaves", "rw": "Mukoreshe imiti y'isazi (fungicide) y'umuringa" },
+      "prevention": { "en": "Proper 3x3m spacing, good drainage, leaf sanitation", "rw": "Tera intera nyayo 3m x 3m" },
+      "severity": "moderate"
+    }
+  },
+  "coffee": {
+    "coffee_berry_disease": {
+      "name": { "en": "Coffee Berry Disease (CBD)", "rw": "Indwara y'Imbuto za Kawa" },
+      "symptoms": { "en": "Dark sunken lesions on green berries, berry drop", "rw": "Ibinyabuzima byirabura ku mbuto za kawa, imbuto zigwa" },
+      "treatment": { "en": "Apply copper oxychloride or chlorothalonil at flowering and pinhead stages", "rw": "Mukoreshe copper oxychloride mu gihe cy'indabyo" },
+      "prevention": { "en": "Plant resistant varieties (Ruiru 11, Batian), prune for airflow", "rw": "Tera ubwoko bwirinda nka Ruiru 11" },
+      "severity": "high"
+    },
+    "coffee_leaf_rust": {
+      "name": { "en": "Coffee Leaf Rust", "rw": "Ikirushwa cy'Amababi ya Kawa" },
+      "symptoms": { "en": "Orange-yellow powdery spots on leaf undersides, premature defoliation", "rw": "Ibibara by'umuhondo-orange munsi y'amababi" },
+      "treatment": { "en": "Apply copper fungicides, improve air circulation through pruning", "rw": "Mukoreshe imiti y'umuringa" },
+      "prevention": { "en": "Resistant varieties, balanced nutrition, shade management", "rw": "Tera ubwoko bwirinda" },
+      "severity": "moderate"
+    }
+  },
+  "maize": {
+    "maize_streak_virus": {
+      "name": { "en": "Maize Streak Virus (MSV)", "rw": "Virus y'Imirongo ku Bigori" },
+      "symptoms": { "en": "White-yellow streaks parallel to leaf veins, stunted growth", "rw": "Imirongo y'umuhondo cyangwa umweru ku mababi y'ibigori" },
+      "treatment": { "en": "Remove infected plants, control leafhopper vectors with imidacloprid", "rw": "Kura ibimera byanduye, rwanya udukoko" },
+      "prevention": { "en": "Plant resistant hybrids, early planting, control grasses near field", "rw": "Tera kare, koresha imbuto zirinda" },
+      "severity": "high"
+    },
+    "gray_leaf_spot": {
+      "name": { "en": "Gray Leaf Spot", "rw": "Ibibara by'Imvi ku Mababi" },
+      "symptoms": { "en": "Rectangular gray-tan lesions parallel to leaf veins", "rw": "Ibibara by'imvi mu nzira ndende ku mababi" },
+      "treatment": { "en": "Apply azoxystrobin or pyraclostrobin fungicides at tasseling", "rw": "Mukoreshe fungicide mu gihe cy'urubingo" },
+      "prevention": { "en": "Crop rotation, residue management, resistant varieties", "rw": "Hindukira ibihingwa" },
+      "severity": "moderate"
+    },
+    "fall_armyworm": {
+      "name": { "en": "Fall Armyworm", "rw": "Inenye y'Ibigori (Fall Armyworm)" },
+      "symptoms": { "en": "Ragged holes in leaves, sawdust-like frass in whorl, damaged tassels", "rw": "Ibirobyi mu mababi, ifu ihagaze mu rubingo" },
+      "treatment": { "en": "Apply emamectin benzoate or chlorantraniliprole early morning to whorl", "rw": "Mukoreshe umuti wa emamectin mu gitondo" },
+      "prevention": { "en": "Push-pull system, early planting, scouting weekly, biological control with Trichogramma", "rw": "Reba ibihingwa buri cyumweru, tera kare" },
+      "severity": "high"
+    }
+  },
+  "beans": {
+    "angular_leaf_spot": {
+      "name": { "en": "Angular Leaf Spot", "rw": "Ibibara by'Inguni ku Mababi" },
+      "symptoms": { "en": "Angular brown spots bounded by leaf veins, yellow halos", "rw": "Ibibara by'inguni byijimye ku mababi" },
+      "treatment": { "en": "Apply mancozeb or copper hydroxide every 10–14 days", "rw": "Mukoreshe mancozeb buri cyumweru" },
+      "prevention": { "en": "Certified seed, 2-year crop rotation, avoid overhead irrigation", "rw": "Koresha imbuto zifite icyemezo" },
+      "severity": "moderate"
+    },
+    "bean_anthracnose": {
+      "name": { "en": "Bean Anthracnose", "rw": "Anthracnose y'Ibishyimbo" },
+      "symptoms": { "en": "Dark sunken lesions on pods, stems, and seeds", "rw": "Ibinyabuzima byirabura ku mashami n'imbuto" },
+      "treatment": { "en": "Apply benomyl or thiophanate-methyl at first sign", "rw": "Mukoreshe imiti ako kanya bibanje" },
+      "prevention": { "en": "Disease-free seed, no field work when wet, crop rotation", "rw": "Ntukore mu murima utose" },
+      "severity": "moderate"
+    }
+  },
+  "potato": {
+    "late_blight": {
+      "name": { "en": "Late Blight", "rw": "Indwara Yikaze y'Ibirayi (Late Blight)" },
+      "symptoms": { "en": "Water-soaked dark lesions on leaves, white mold underneath in humid conditions, tuber rot", "rw": "Ibibara byijimye byuzuye amazi ku mababi, ifu yera munsi" },
+      "treatment": { "en": "Apply mancozeb preventively, metalaxyl curatively every 7 days in wet weather", "rw": "Mukoreshe mancozeb buri cyumweru mu gihe cy'imvura" },
+      "prevention": { "en": "Resistant varieties (Kinigi, Cruza), proper hilling, certified seed potatoes", "rw": "Tera ubwoko nka Kinigi" },
+      "severity": "high"
+    },
+    "early_blight": {
+      "name": { "en": "Early Blight", "rw": "Indwara Yibanze y'Ibirayi" },
+      "symptoms": { "en": "Brown circular spots with concentric rings (target spots) on older leaves", "rw": "Ibibara byerwa byirungurutse ku mababi" },
+      "treatment": { "en": "Apply chlorothalonil or azoxystrobin", "rw": "Mukoreshe chlorothalonil" },
+      "prevention": { "en": "Crop rotation, balanced nitrogen, mulching", "rw": "Hindukira ibihingwa" },
+      "severity": "moderate"
+    }
+  },
+  "cassava": {
+    "cassava_mosaic": {
+      "name": { "en": "Cassava Mosaic Disease (CMD)", "rw": "Indwara ya Mosaic y'Imyumbati" },
+      "symptoms": { "en": "Yellow-green mosaic pattern on leaves, leaf distortion, stunted growth", "rw": "Amababi y'imyumbati afite ibibara by'umuhondo n'icyatsi" },
+      "treatment": { "en": "Uproot and burn infected plants, control whitefly vectors", "rw": "Kura wenyamira imyumbati yanduye" },
+      "prevention": { "en": "Plant CMD-resistant varieties, use clean cuttings from certified sources", "rw": "Tera ubwoko bwirinda CMD" },
+      "severity": "high"
+    },
+    "cassava_brown_streak": {
+      "name": { "en": "Cassava Brown Streak Disease (CBSD)", "rw": "CBSD - Imirongo Y'umuhondo ku Myumbati" },
+      "symptoms": { "en": "Brown necrotic streaks on stems, yellow leaf chlorosis, dark rot in tuber flesh", "rw": "Imirongo y'ibara ry'umuhondo ku mashami, imyumbati yibora imbere" },
+      "treatment": { "en": "No cure — remove infected plants immediately", "rw": "Nta muti — kura ako kanya" },
+      "prevention": { "en": "Tolerant varieties, clean planting material, whitefly control", "rw": "Tera ubwoko bwirinda" },
+      "severity": "high"
+    }
+  },
+  "rice": {
+    "rice_blast": {
+      "name": { "en": "Rice Blast", "rw": "Indwara y'Umuceri (Blast)" },
+      "symptoms": { "en": "Diamond-shaped lesions on leaves, neck rot at panicle base", "rw": "Ibibara by'inguni 4 ku mababi" },
+      "treatment": { "en": "Apply tricyclazole or carbendazim at booting stage", "rw": "Mukoreshe tricyclazole" },
+      "prevention": { "en": "Resistant varieties, balanced nitrogen (avoid excess), seed treatment", "rw": "Wirinde guca ifumbire ya azote nyinshi" },
+      "severity": "high"
+    },
+    "bacterial_leaf_blight": {
+      "name": { "en": "Bacterial Leaf Blight", "rw": "Bacterial Leaf Blight" },
+      "symptoms": { "en": "Yellow water-soaked stripes from leaf tip, wilting", "rw": "Imirongo y'umuhondo guhera ku mpera y'ababi" },
+      "treatment": { "en": "Copper bactericides, remove ratoons", "rw": "Mukoreshe imiti y'umuringa" },
+      "prevention": { "en": "Resistant varieties, balanced fertilization, drain field periodically", "rw": "Tera ubwoko bwirinda" },
+      "severity": "moderate"
+    }
+  },
+  "tomato": {
+    "tomato_late_blight": {
+      "name": { "en": "Tomato Late Blight", "rw": "Late Blight y'Inyanya" },
+      "symptoms": { "en": "Dark water-soaked patches on leaves, white fuzz underneath, fruit rot", "rw": "Ibibara byijimye byuzuye amazi ku mababi" },
+      "treatment": { "en": "Mancozeb preventive, metalaxyl curative", "rw": "Mukoreshe mancozeb" },
+      "prevention": { "en": "Resistant varieties, drip irrigation, staking", "rw": "Koresha kuhira mu mizi" },
+      "severity": "high"
+    }
+  }
+}
