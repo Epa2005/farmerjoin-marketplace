@@ -319,6 +319,8 @@ if (usePostgres) {
         }
     }, 60000).unref();
 
+    db.isPostgres = true;
+
     module.exports = db;
 } else {
     const useMySqlSsl = String(process.env.DB_SSL || 'false').toLowerCase() === 'true';
@@ -342,6 +344,8 @@ if (usePostgres) {
     connection.healthCheck = (callback) => {
         connection.query('SELECT 1 AS ok', callback);
     };
+
+    connection.isPostgres = false;
 
     module.exports = connection;
 }

@@ -1035,9 +1035,15 @@ app.post("/auth/register", registerLimiter, validateInput(validateRegistration),
 
                     }
 
-                    // Insert user
+                    // Insert user. On Postgres we explicitly return the generated
+                    // user_id so we never depend on primary-key auto-detection
+                    // (which returns null when the table has no detectable PK).
+                    const userInsertSql = db.isPostgres
+                        ? "INSERT INTO users (full_name,email,phone,password,role,created_at) VALUES (?,?,?,?,?,NOW()) RETURNING user_id"
+                        : "INSERT INTO users (full_name,email,phone,password,role,created_at) VALUES (?,?,?,?,?,NOW())";
+
                     db.query(
-                        "INSERT INTO users (full_name,email,phone,password,role,created_at) VALUES (?,?,?,?,?,NOW())",
+                        userInsertSql,
                         [full_name, email, phone, hashed, role],
                         (err, result) => {
 
@@ -1056,7 +1062,9 @@ app.post("/auth/register", registerLimiter, validateInput(validateRegistration),
                                 });
                             }
 
-                            const userId = result.insertId;
+                            const userId = (result.rows && result.rows.length > 0 && result.rows[0].user_id != null)
+                                ? result.rows[0].user_id
+                                : result.insertId;
 
                             console.log('User created with ID:', userId);
 
