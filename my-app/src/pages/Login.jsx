@@ -171,6 +171,15 @@ function Login() {
                 </div>
               </div>
 
+              <div className="flex items-center justify-end -mt-1">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs sm:text-sm text-emerald-600 hover:text-emerald-700 font-medium transition-colors duration-200"
+                >
+                  {t('forgotPassword', 'Forgot password?')}
+                </Link>
+              </div>
+
               <div>
                 <button
                   type="submit"

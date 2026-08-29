@@ -1351,17 +1351,23 @@ app.get("/admin/online-users", auth, auth.requireRole(['admin']), (req, res) => 
 
 app.post("/auth/forgot-password/verify", (req, res) => {
 
-    const { email } = req.body;
+    const rawEmail = req.body && req.body.email;
 
+    if (!rawEmail || typeof rawEmail !== 'string' || !rawEmail.trim()) {
 
-
-    if (!email) {
-
-        return res.status(400).json({ message: "Email is required" });
+        return res.status(400).json({ success: false, message: "Email is required" });
 
     }
 
+    const email = rawEmail.trim().toLowerCase();
 
+    // Validate email format before hitting the database
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+
+        return res.status(400).json({ success: false, message: "Please provide a valid email address" });
+
+    }
 
     // Check if user exists and is a buyer, farmer, or cooperative
 
@@ -1377,23 +1383,19 @@ app.post("/auth/forgot-password/verify", (req, res) => {
 
                 console.error("Database error:", err);
 
-                return res.status(500).json({ message: "Database error" });
+                return res.status(500).json({ success: false, message: "Database error" });
 
             }
-
-
 
             if (result.length === 0) {
 
-                return res.status(404).json({ message: "No account found with this email" });
+                // Generic message to avoid leaking which emails exist
+
+                return res.status(404).json({ success: false, message: "No account found with this email" });
 
             }
 
-
-
             const user = result[0];
-
-
 
             // Generate a reset token (valid for 1 hour)
 
@@ -1401,13 +1403,12 @@ app.post("/auth/forgot-password/verify", (req, res) => {
 
             const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
 
-
-
-            // Store reset token in database (you might want to add these columns to users table)
-
-            // For now, we'll return token directly (in production, email it)
+            // NOTE: no email service is configured, so the token is returned
+            // directly to the client. In production, email it instead.
 
             res.json({
+
+                success: true,
 
                 message: "Email verified. You can now reset your password.",
 

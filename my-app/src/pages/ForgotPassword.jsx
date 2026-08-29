@@ -13,6 +13,7 @@ function ForgotPassword() {
   const [resetToken, setResetToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [success, setSuccess] = useState(false);
   const [userData, setUserData] = useState(null);
 
@@ -20,10 +21,18 @@ function ForgotPassword() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setFieldErrors({});
     setSuccess(false);
 
+    const trimmedEmail = email.trim();
+    if (!/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
+      setFieldErrors({ email: "Please provide a valid email address" });
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await API.post("/auth/forgot-password/verify", { email });
+      const res = await API.post("/auth/forgot-password/verify", { email: trimmedEmail });
 
       // Move to step 2 with user data
       setStep(2);
@@ -33,6 +42,18 @@ function ForgotPassword() {
       
     } catch (err) {
       console.error("Email verification error:", err);
+      if (err.response?.status === 400 && err.response?.data?.errors) {
+        const byField = {};
+        err.response.data.errors.forEach((validationError) => {
+          const f = validationError.field || validationError.param;
+          if (f) byField[f] = validationError.msg || validationError.message;
+        });
+        if (Object.keys(byField).length > 0) {
+          setFieldErrors(byField);
+          setError(err.response?.data?.message || "Please fix the highlighted fields");
+          return;
+        }
+      }
       const message =
         err?.response?.data?.message ||
         "Failed to verify email. Please check your email and try again.";
@@ -46,27 +67,38 @@ function ForgotPassword() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setFieldErrors({});
 
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
-      return;
+    const fieldErr = {};
+
+    if (newPassword.length < 8) {
+      fieldErr.newPassword = "Password must be at least 8 characters long";
+    } else {
+      if (!/[A-Z]/.test(newPassword)) fieldErr.newPassword = "At least one uppercase letter is required";
+      else if (!/[a-z]/.test(newPassword)) fieldErr.newPassword = "At least one lowercase letter is required";
+      else if (!/\d/.test(newPassword)) fieldErr.newPassword = "At least one number is required";
+      else if (!/[^A-Za-z0-9]/.test(newPassword)) fieldErr.newPassword = "At least one special character (e.g. !@#) is required";
     }
 
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters long");
+    if (newPassword !== confirmPassword) {
+      fieldErr.confirmPassword = "Passwords do not match";
+    }
+
+    if (Object.keys(fieldErr).length > 0) {
+      setFieldErrors(fieldErr);
       setLoading(false);
       return;
     }
 
     try {
       const res = await API.post("/auth/forgot-password/reset", {
-        email,
+        email: email.trim(),
         newPassword,
         resetToken
       });
 
       setSuccess(true);
+      setError("");
       
       // Show success message and redirect to login after delay
       setTimeout(() => {
@@ -75,6 +107,18 @@ function ForgotPassword() {
       
     } catch (err) {
       console.error("Password reset error:", err);
+      if (err.response?.status === 400 && err.response?.data?.errors) {
+        const byField = {};
+        err.response.data.errors.forEach((validationError) => {
+          const f = validationError.field || validationError.param;
+          if (f) byField[f] = validationError.msg || validationError.message;
+        });
+        if (Object.keys(byField).length > 0) {
+          setFieldErrors(byField);
+          setError(err.response?.data?.message || "Please fix the highlighted fields");
+          return;
+        }
+      }
       const message =
         err?.response?.data?.message ||
         "Failed to reset password. Please try again.";
@@ -83,6 +127,11 @@ function ForgotPassword() {
       setLoading(false);
     }
   };
+
+  const inputClass = (hasError) =>
+    `w-full pl-10 pr-3 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 font-ui bg-white text-gray-800 placeholder-gray-500 ${
+      hasError ? "border-red-400 bg-red-50" : "border-gray-300"
+    }`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
@@ -133,12 +182,16 @@ function ForgotPassword() {
                       id="email"
                       type="email"
                       placeholder="Enter your buyer, farmer, or cooperative email"
-                      className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent font-ui bg-white text-gray-800 placeholder-gray-500"
+                      className={inputClass(fieldErrors.email)}
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                      }}
                       required
                     />
                   </div>
+                  {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
                 </div>
 
               <div>
@@ -217,13 +270,20 @@ function ForgotPassword() {
                       id="newPassword"
                       type="password"
                       placeholder={t('enterNewPassword')}
-                      className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent font-ui bg-white text-gray-800 placeholder-gray-500"
+                      className={inputClass(fieldErrors.newPassword)}
                       value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        if (fieldErrors.newPassword) setFieldErrors((prev) => ({ ...prev, newPassword: undefined }));
+                      }}
                       required
-                      minLength={6}
+                      minLength={8}
                     />
                   </div>
+                  {fieldErrors.newPassword && <p className="mt-1 text-xs text-red-600">{fieldErrors.newPassword}</p>}
+                  <p className="mt-1 text-xs text-gray-500">
+                    {t('passwordHint', '8+ chars, at least one uppercase, one lowercase, one number and one special character')}
+                  </p>
                 </div>
 
                 <div>
@@ -240,13 +300,17 @@ function ForgotPassword() {
                       id="confirmPassword"
                       type="password"
                       placeholder={t('confirmNewPassword')}
-                      className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent font-ui bg-white text-gray-800 placeholder-gray-500"
+                      className={inputClass(fieldErrors.confirmPassword)}
                       value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        if (fieldErrors.confirmPassword) setFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+                      }}
                       required
-                      minLength={6}
+                      minLength={8}
                     />
                   </div>
+                  {fieldErrors.confirmPassword && <p className="mt-1 text-xs text-red-600">{fieldErrors.confirmPassword}</p>}
                 </div>
               </div>
 
