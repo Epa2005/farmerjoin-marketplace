@@ -103,7 +103,10 @@ function Register() {
       } else if (err.code === "ECONNREFUSED") {
         setError(t('cannotConnectToServer') || "Cannot connect to server. Please make sure the backend is running on port 5000.");
       } else {
-        setError(err.response?.data?.message || err.message || (t('registrationFailed') || "Registration failed. Please try again."));
+        const detail = err.response?.data?.detail;
+        setError(detail
+          ? `${err.response?.data?.message || 'Registration failed'}: ${detail}`
+          : (err.response?.data?.message || err.message || (t('registrationFailed') || "Registration failed. Please try again.")));
       }
     } finally {
       setLoading(false);
