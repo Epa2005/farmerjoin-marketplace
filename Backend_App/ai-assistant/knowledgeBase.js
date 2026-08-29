@@ -45,7 +45,7 @@ const topics = [
   {
     id: 'about',
     title: 'About the platform',
-    keywords: ['what is farmerjoin', 'about the platform', 'about this app', 'about this system', 'what is this website', 'tell me about farmerjoin', 'what does farmerjoin do', 'ubuhinzi bwa farmerjoin', 'farmerjoin ni iki'],
+    keywords: ['what is farmerjoin', 'about the platform', 'about this app', 'about this system', 'what is this website', 'tell me about farmerjoin', 'what does farmerjoin do', 'who can use farmerjoin', 'who uses farmerjoin', 'how does farmerjoin work', 'what is farmerjoin used for', 'ubuhinzi bwa farmerjoin', 'farmerjoin ni iki'],
     message: () =>
       `**About FarmerJoin**\n\nFarmerJoin is an **agricultural marketplace** that connects farmers directly with buyers in Rwanda and the region.\n\n**Who uses it:**\n• **Farmers** — list products, manage their farm profile, receive orders.\n• **Buyers** — browse products, order, pay with mobile money, review quality.\n• **Cooperatives** — manage member farmers and bulk listings.\n• **Admins / Sub-admins** — manage users, moderate content, view reports.\n\n**Main features:**\n• Direct farmer-to-buyer connections (no middlemen)\n• Product catalogue by category (vegetables, fruits, grains, livestock)\n• Cart + checkout with **mobile money (MTN, Airtel)**, cash on delivery and cards\n• Order tracking, reviews and ratings\n• Farmer profiles with location (province, district, sector)\n• Multilingual interface — English, Kinyarwanda, French\n• Built-in AI assistant (me) and AgriAI tools (crop scan, weather)\n\n**Getting started:**\n1. Create an account (Buyer or Farmer)\n2. Farmers complete their farmer details (farm name, location)\n3. Browse products or list your produce\n4. Start trading!`,
     followUps: ['How do I register?', 'What payment methods are accepted?', 'What can farmers sell?']
@@ -53,7 +53,7 @@ const topics = [
   {
     id: 'register',
     title: 'Registration',
-    keywords: ['register', 'create account', 'sign up', 'signup', 'join', 'new account', 'make account', 'open account', 'kwiyandikisha', 'andika', 'create an account', 'account create', 'inscription', 'créer un compte', 'sinscrire', 's\'inscrire', 'iyandikishe'],
+    keywords: ['register', 'create account', 'sign up', 'signup', 'new account', 'make account', 'open account', 'kwiyandikisha', 'andika', 'create an account', 'create a new account', 'account create', 'inscription', 'créer un compte', 'sinscrire', 's\'inscrire', 'iyandikishe'],
     message: (ctx) =>
       `**Creating an account on FarmerJoin**\n\n1. Open the **Register** page (button in the top navigation).\n2. Choose your account type: **Buyer** or **Farmer**.\n3. Fill in the form:\n   • **Full name** — 2 to 100 characters (letters, spaces, hyphens, dots, apostrophes).\n   • **Email** — a valid address, e.g. name@example.com.\n   • **Phone** — with country code, e.g. +2507XXXXXXXX (International format).\n   • **Password** — 8 to 72 characters with at least one uppercase letter, one lowercase letter, one number and one special character (e.g. ! @ #).\n4. Click **Create Account**.\n\n**What happens next:**\n• **Farmers** are taken to the **Farmer Details** page to add their farm name, province, district, sector and bio.\n• **Buyers** are taken to **Login**, then to the **Buyer Dashboard**.\n\n**Common messages:**\n• *"Email already registered"* — that account already exists. Use **Forgot password?** on the Login page.\n• *"Please fix the highlighted fields"* — check the red fields and correct them.\n\n⚠️ Emails are stored **lowercase**, so MyName@x.com becomes myname@x.com automatically.`,
     followUps: ['Why is my password rejected?', 'I see "Email already registered", what do I do?', 'How do I log in after registering?']
@@ -85,7 +85,7 @@ const topics = [
   {
     id: 'buyerGuide',
     title: 'Buyer guide',
-    keywords: ['what can a buyer', 'buyer do', 'as a buyer', 'buyer guide', 'buyer dashboard', 'buyer how', 'umucuruzi akora', 'how to buy', 'buy products', 'purchase', 'acheteur', 'acheter', 'buy', 'kugura', 'gura', 'kubona'],
+    keywords: ['what can a buyer', 'buyer do', 'as a buyer', 'buyer guide', 'buyer dashboard', 'buyer how', 'umucuruzi akora', 'how to buy', 'buy products', 'purchase', 'acheteur', 'acheter', 'buy', 'kugura', 'gura', 'kubona', 'find a farmer', 'find farmers', 'buy from a farmer', 'buy from farmers', 'search for a farmer', 'buy without registering', 'buy without an account', 'buy as a guest', 'as a guest', 'without registering', 'without an account'],
     message: (ctx) =>
       `**Buyer guide on FarmerJoin**\n\nOn your **Buyer Dashboard** you can:\n• Browse and search products by category\n• Open a product to see details, farmer and price\n• Add products to the **cart**\n• **Checkout** and pay (mobile money MTN/Airtel, cash on delivery, card)\n• Track your **orders** and their status\n• Save favorite farmers and leave **reviews/ratings**\n• Chat/message farmers directly\n\n**How to order:**\n1. Open a product → set quantity → **Add to cart**\n2. Open the cart → **Checkout**\n3. Confirm delivery address/phone and pay\n4. Follow the order in the **Orders** page\n\n${ctx.role === 'buyer' ? 'You are signed in as a buyer, so open **Buyer Dashboard** to start.' : 'To get these features, register/login as a Buyer.'}`,
     followUps: ['How do I pay?', 'How do I track my order?', 'How do I leave a review?']
@@ -125,7 +125,7 @@ const topics = [
   {
     id: 'editProduct',
     title: 'Edit / delete product',
-    keywords: ['edit product', 'update product', 'delete product', 'remove product', 'change price', 'change photo', 'edit price', 'hinduza igicuruzwa'],
+    keywords: ['edit product', 'update product', 'delete product', 'remove product', 'change price', 'change photo', 'edit price', 'delete my product', 'remove my product', 'hinduza igicuruzwa'],
     message: () =>
       `**Editing or removing a product**\n\n1. Open your **Farmer Dashboard**\n2. Find the product (your products list) and open it\n3. Use **Edit** to change name, category, price, quantity, description or photos\n4. Use **Delete/Remove** if you no longer want to sell it\n\nPrices and stock should be kept up to date so buyers always see correct availability.`,
     followUps: ['How do I update my stock?', 'How do I add photos to a product?']
@@ -133,7 +133,7 @@ const topics = [
   {
     id: 'cart',
     title: 'Cart',
-    keywords: ['cart', 'basket', 'add to cart', 'basketball', 'shopping cart', 'bag', 'ibiri mu gikorwa', 'remove from cart', 'cart page'],
+    keywords: ['cart', 'basket', 'add to cart', 'basketball', 'shopping cart', 'shopping bag', 'shopping bags', 'ibiri mu gikorwa', 'remove from cart', 'cart page'],
     message: () =>
       `**Your cart on FarmerJoin**\n\n• Open a product and click **Add to Cart**\n• The cart holds your selected items, quantities and total price\n• You can change quantities or remove items before checkout\n\n**To order:**\n1. Open the **Cart** page\n2. Review the items and total\n3. Click **Checkout**\n4. Confirm your details and **pay** (mobile money, cash on delivery, card)`,
     followUps: ['How do I checkout and pay?', 'What payment methods are accepted?', 'How is delivery calculated?']
@@ -149,7 +149,7 @@ const topics = [
   {
     id: 'payment',
     title: 'Payment & mobile money',
-    keywords: ['pay', 'payment', 'mobile money', 'mtn', 'airtel', 'momo', 'money', 'kwishyura', 'dette', 'invoice', 'cash on delivery', 'paiement', 'payer', 'paiement mobile'],
+    keywords: ['pay', 'payment', 'mobile money', 'mtn', 'airtel', 'mtn momo', 'airtel money', 'momo', 'money', 'kwishyura', 'dette', 'invoice', 'bill', 'bills', 'receipt', 'proof of payment', 'payment proof', 'cash on delivery', 'paiement', 'payer', 'paiement mobile', 'how to pay', 'pay for my order'],
     message: () =>
       `**Payments on FarmerJoin**\n\nAccepted methods:\n• **Mobile money** — MTN Mobile Money, Airtel Money (+250 numbers)\n• **Cash on delivery** — pay when the order arrives\n• **Card / bank transfer** for online payments\n\n**Mobile money tips:**\n• Make sure your MTN/Airtel number is active and has enough balance\n• Confirm the amounts on your phone when prompted\n• Keep the confirmation SMS as proof\n\n**Security:**\n• Transactions use the secure payment flow built into the app\n• Never share your PIN with anyone`,
     followUps: ['Why did my mobile money fail?', 'How do refunds work?']
@@ -157,15 +157,23 @@ const topics = [
   {
     id: 'orders',
     title: 'Orders & tracking',
-    keywords: ['order', 'orders', 'track', 'tracking', 'delivery status', 'where is my order', 'order list', 'status', 'isuda', 'command', 'commande', 'commandes', 'suivre', 'suivi', 'mon order'],
+    keywords: ['order', 'orders', 'track', 'tracking', 'delivery status', 'where is my order', 'order list', 'status', 'isuda', 'command', 'commande', 'commandes', 'suivre', 'suivi', 'mon order', 'cancel order', 'cancel my order', 'cancel an order', 'cancel', 'cancel my order', 'track my order', 'where is my order', 'retourner la commande', 'annuler'],
     message: () =>
       `**Orders on FarmerJoin**\n\n• Buyers see their orders in the **Orders** page / buyer dashboard.\n• Farmers see orders for their products in the **Farmer Dashboard**.s\n\n**Typical order flow:**\n1. Placed (payment confirmed)\n2. Farmer prepares the products\n3. Delivery arranged / picked up\n4. Completed + reviewed\n\n**To track:** open the **Orders** page and check the current status. If something looks wrong, message the farmer directly or contact support.`,
     followUps: ['How do I cancel an order?', 'How do refunds work?', 'How do I message the farmer?']
   },
   {
+    id: 'refunds',
+    title: 'Refunds & returns',
+    keywords: ['refund', 'refunds', 'refunded', 'get my money back', 'i want my money back', 'money back', 'my money', 'return money', 'reimbursement', 'reimburse', 'return a product', 'return an order', 'return my order', 'return items', 'partial refund', 'full refund', 'remboursement', 'rembourser', 'remboursement de commande', 'gukuzura', 'kusubiza amafaranga', 'retour'],
+    message: (ctx) =>
+      `**Refunds on FarmerJoin**\n\n• Refunds depend on the order status and the payment method used.\n• **Mobile money / card payments** are refunded back to the same account when the order is cancelled or the products were not delivered.\n• **Cash on delivery** orders have no money to refund — just confirm you did not receive delivery.\n\n**To request a refund:**\n1. Open the **Orders** page and find the order\n2. Cancel the order (if allowed) or contact the farmer/seller\n3. For unresolved issues, contact **support** with your order number\n\nRefund processing normally takes 1–5 business days once approved.`,
+    followUps: ['How do I cancel an order?', 'How do I contact support?', 'Why did my refund take long?']
+  },
+  {
     id: 'delivery',
     title: 'Delivery',
-    keywords: ['delivery', 'deliver', 'shipping', 'pickup', 'pick up', 'transport', 'utwari', 'kalite', 'driver', 'location delivery', 'livraison', 'remise'],
+    keywords: ['delivery', 'deliver', 'shipping', 'pickup', 'pick up', 'transport', 'utwari', 'kalite', 'driver', 'location delivery', 'livraison', 'remise', 'delivery charges', 'delivery cost', 'delivery fee', 'shipping cost', 'how much for delivery', 'delivery price'],
     message: () =>
       `**Delivery on FarmerJoin**\n\nOptions typically available:\n• **Home delivery** — products brought to you\n• **Pickup point / market delivery** — you collect at an agreed point\n\n**Timeframes:** same day, next day or 2-3 days depending on distance.\n\n**Cost:** based on distance and order size. Buyers usually confirm delivery details at checkout.\n\n**Coverage:** all provinces of Rwanda.\n\n💡 Tip: choosing a pickup point often lowers the delivery cost.`,
     followUps: ['How much does delivery cost?', 'Where can I pick up my order?']
@@ -173,7 +181,7 @@ const topics = [
   {
     id: 'reviews',
     title: 'Reviews & ratings',
-    keywords: ['review', 'reviews', 'rating', 'rate', 'feedback', 'stars', 'comment about', 'kunegura', 'evaluation'],
+    keywords: ['review', 'reviews', 'rating', 'rate', 'feedback', 'stars', 'comment about', 'kunegura', 'evaluation', 'delete my review', 'remove my review', 'edit my review', 'supprimer mon avis'],
     message: () =>
       `**Reviews and ratings on FarmerJoin**\n\n• After an order you can leave a review and a star rating for the farmer/product\n• Reviews help other buyers choose quality suppliers\n• Farmers see feedback to improve quality\n\n**To review:**\n1. Go to your recent order\n2. Choose the star rating\n3. Write a short comment and submit`,
     followUps: ['How do I rate a farmer?', 'Can I delete a review?']
@@ -197,10 +205,18 @@ const topics = [
   {
     id: 'editProfile',
     title: 'Edit profile / settings',
-    keywords: ['edit profile', 'update profile', 'profile settings', 'change name', 'change email', 'change phone', 'my account info', 'settings', 'amakuru yanjye', 'edit my info'],
+    keywords: ['edit profile', 'update profile', 'profile settings', 'change name', 'change email', 'change my email', 'update my email', 'change email address', 'change phone', 'change my phone', 'update my phone', 'update my phone number', 'my phone number', 'phone number', 'contact number', 'my account info', 'settings', 'amakuru yanjye', 'edit my info', 'change my information', 'update my information'],
     message: () =>
       `**Editing your profile**\n\n1. Open **Edit Profile** (from your account menu)\n2. Update your name, phone, location or upload a photo\n3. Save your changes\n\n⚠️ Your **email** stays the same address you registered with (it identifies your account). To change the login password use **Forgot password?** on the Login page.`,
     followUps: ['How do I change my password?', 'How do I change my photo?']
+  },
+  {
+    id: 'deleteAccount',
+    title: 'Delete / close account',
+    keywords: ['delete my account', 'delete account', 'delete my profile', 'erase my account', 'close my account', 'close account', 'remove my account', 'cancel my account', 'destroy my account', 'remove my profile', 'stop using my account', 'delete all my data', 'supprimer mon compte', 'supprimer compte', 'fermer mon compte', 'souspression du compte', 'gusiba konti', 'gusiba'],
+    message: () =>
+      `**Deleting / closing your account on FarmerJoin**\n\nDeletion is handled carefully so nobody is stranded mid-order:\n1. If you have **active orders or products**, resolve them first (complete or cancel the orders, remove or finish your listings).\n2. Contact **support** through the Help page / footer contact info and ask to close your account — a support member deletes it securely on our side.\n3. Your personal data is removed; transaction records required by law may be kept anonymous.\n\n**Alternatives:**\n• Prefer to keep selling/buying? You can just **log out** or **edit your profile** instead.\n• If the reason is billing or quality, support can help correct it.\n\nAccount closure is permanent and cannot be undone.`,
+    followUps: ['How do I contact support?', 'What happens to my data?', 'Can I come back after deleting?']
   },
   {
     id: 'subscription',
@@ -261,9 +277,9 @@ const topics = [
   {
     id: 'agriculture',
     title: 'General agriculture',
-    keywords: ['agriculture', 'farming', 'crop', 'crops', 'plant', 'planting', 'soil', 'fertilizer', 'manure', 'harvest', 'ubuhinzi', 'gutera', 'imbuto', 'agronomy', 'grow', 'growing', 'saisons', 'saison', 'marais', 'récolte'],
+    keywords: ['agriculture', 'farming', 'crop', 'crops', 'plant', 'planting', 'soil', 'fertilizer', 'manure', 'harvest', 'ubuhinzi', 'gutera', 'imbuto', 'agronomy', 'grow', 'growing', 'saisons', 'saison', 'marais', 'récolte', 'seasons', 'farming seasons', 'planting seasons', 'growing seasons', 'seasons in rwanda', 'three seasons', 'water', 'watering', 'irrigation', 'irrigate', 'when to plant', 'how to plant', 'how to grow', 'cabbage', 'maize planting', 'beans planting', 'potatoes planting', 'dry season crops'],
     message: () =>
-      `**Agriculture guidance (Rwanda)**\n\nRwanda has **three farming seasons**:\n• **Season A** — Sept–Dec (main season, maize, beans, cassava)\n• **Season B** — Feb–May (maize, beans, potatoes)\n• **Season C** — Jun–Aug (short season, vegetables, irrigation crops)\n\n**Practical tips:**\n• Prepare the soil early and use well-drained fields\n• Use improved seeds and proper spacing\n• Apply compost/manure and fertilizers as recommended locally\n• Control weeds early and rotate crops to keep soil healthy\n• Ask your local agronomist / agriculture officer for site-specific advice\n\nOn FarmerJoin you can also use the **AgriAI** page (crop scan, weather) for more help.`,
+      `**Agriculture guidance (Rwanda)**\n\nRwanda has **three farming seasons**:\n• **Season A** — Sept–Dec (main season, maize, beans, cassava)\n• **Season B** — Feb–May (maize, beans, potatoes)\n• **Season C** — Jun–Aug (short season, vegetables, irrigation crops)\n\n**Practical tips:**\n• Prepare the soil early and use well-drained fields\n• Use improved seeds and proper spacing\n• Apply compost/manure and fertilizers as recommended locally\n• **Watering:** in Season C (Jun–Aug) supplement with irrigation; water in early morning or evening so the sun does not burn the leaves\n• Control weeds early and rotate crops to keep soil healthy\n• Ask your local agronomist / agriculture officer for site-specific advice\n\nOn FarmerJoin you can also use the **AgriAI** page (crop scan, weather) for more help.`,
     followUps: ['When should I plant maize?', 'How do I scan a crop disease?', 'Tell me about soil']
   },
   {
@@ -285,7 +301,7 @@ const topics = [
   {
     id: 'market',
     title: 'Prices, fees & market',
-    keywords: ['price', 'prices', 'fee', 'fees', 'commission', 'cost', 'costs', 'cheap', 'expensive', 'discount', 'igiciro', 'ubwizwe', 'market price', 'pricing', 'prix', 'frais', 'tarifs'],
+    keywords: ['price', 'prices', 'fee', 'fees', 'commission', 'cost', 'costs', 'cheap', 'expensive', 'overpriced', 'overpricing', 'discount', 'free', 'is it free', 'is farmerjoin free', 'free to use', 'free listings', 'igiciro', 'ubwizwe', 'market price', 'pricing', 'prix', 'frais', 'tarifs'],
     message: () =>
       `**Prices and fees on FarmerJoin**\n\n• **Buyers** pay for products + delivery (based on distance/size).\n• **Farmers** — basic product listings are free; a small commission/success fee may apply on sales depending on configuration.\n• Buying in **bulk** usually gets better prices.\n\n**Price tips for sellers:**\n• Compare local market prices at your district market\n• Add production, transport and packaging costs\n• Offer volume discounts to attract bigger orders\n\nPrices are set by sellers — compare offers in the catalogue before ordering.`,
     followUps: ['How is delivery cost calculated?', 'Are there hidden fees for buyers?', 'How should I price my maize?']

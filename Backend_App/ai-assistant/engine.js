@@ -10,7 +10,7 @@
  *   5. returns follow-up suggestions for the widget chips.
  */
 
-const { topics, fallbackMessage } = require('./knowledgeBase');
+const { topics } = require('./knowledgeBase');
 
 const PHRASE_WEIGHT = 4;
 const WORD_WEIGHT = 1;
@@ -26,6 +26,103 @@ function cleanQuery(text) {
     .replace(/[^\p{L}\p{N}\s.!?,'"'()-]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/** Stopwords removed before word-overlap matching. */
+const STOPWORDS = new Set(
+  'the,a,an,is,are,was,were,be,been,being,do,does,did,has,have,had,how,what,when,where,which,who,whom,whose,why,can,could,would,should,will,shall,may,might,must,and,or,but,of,to,in,on,at,by,for,with,about,from,as,per,than,then,too,very,not,no,so,if,me,we,our,us,you,yours,it,its,they,them,their,this,that,these,those,he,she,his,her,am,tell,ask,like,know,want,wants,need,needs,gets,got,get,make,using,use,please,there,here,one,should'.split(',')
+);
+
+function tokens(text) {
+  const m = String(text || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+  return m.filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+}
+
+/** Word pools of a topic (keywords + title + rendered message). */
+const topicPoolCache = new WeakMap();
+function topicPool(topic) {
+  let pools = topicPoolCache.get(topic);
+  if (!pools) {
+    const kw = tokens((topic.keywords || []).join(' '));
+    const title = tokens(topic.title || '');
+    let msg = [];
+    try {
+      msg = tokens(String((topic.message ? topic.message({}) : '') || ''));
+    } catch (_e) {
+      msg = [];
+    }
+    pools = { kw: new Set(kw), title: new Set(title), msg: new Set(msg) };
+    topicPoolCache.set(topic, pools);
+  }
+  return pools;
+}
+
+/**
+ * Fuzzy overlap between the query words and a topic's word pools.
+ * Keyword tokens weigh more than title words, which weigh more than words
+ * that only appear inside an answer body.
+ */
+const HINT_KW = 3;
+const HINT_TITLE = 2;
+const HINT_MSG = 1;
+function closestHintScore(topic, qwords) {
+  if (!qwords.length) return 0;
+  const pools = topicPool(topic);
+  let score = 0;
+  for (const w of qwords) {
+    if (pools.kw.has(w)) score += HINT_KW;
+    else if (pools.title.has(w)) score += HINT_TITLE;
+    else if (pools.msg.has(w)) score += HINT_MSG;
+  }
+  return score;
+}
+
+/** Note prepended when the answer comes from fuzzy matching. */
+function hintIntro(lang) {
+  if (lang === 'rw') return 'Maze nsanga igisubizo cyegera ku kibazo cyawe muri sisiteme:\n\n';
+  if (lang === 'fr') return 'Voici la réponse la plus proche de votre question, trouvée dans le système:\n\n';
+  return 'Here is the closest match I found in the FarmerJoin system for your question:\n\n';
+}
+
+/** Friendly, structured system overview when nothing matched at all. */
+function structuredFallback(lang) {
+  const base = {
+    en: {
+      text:
+        `I can help you with anything about the FarmerJoin system. Your question did not match a specific topic, so here is a quick map of what I know:\n\n` +
+        `**Accounts & Security** — register, login, forgot/reset password, account roles, editing your profile\n` +
+        `**Buying** — products, cart, checkout, mobile money payment, delivery, orders & tracking, reviews\n` +
+        `**Selling** — add/manage products, farm profile, pricing and market fees\n` +
+        `**Cooperative & Admin** — cooperative guide, user management, moderation and bans\n` +
+        `**Help & Guides** — support, security & privacy, languages, subscription boxes\n` +
+        `**Agriculture** — farming seasons (A/B/C), weather, crop scan with AgriAI, watering and plant care\n` +
+        `**System Updates** — what is new and what changed recently`,
+      chips: startChips(),
+    },
+    fr: {
+      text:
+        `Je peux vous aider sur tout le système FarmerJoin. Votre question ne correspond à aucun sujet précis, voici les domaines que je connais :\n\n` +
+        `**Comptes** — inscription, connexion, mot de passe, rôles, profil\n` +
+        `**Achat** — produits, panier, paiement mobile money, livraison, commandes, avis\n` +
+        `**Vente** — ajouter des produits, profil fermier, prix et frais\n` +
+        `**Coopérative & Admin** — guide coopérative, gestion des utilisateurs, modération\n` +
+        `**Agriculture** — saisons, météo, scan des cultures (AgriAI)\n` +
+        `**Mises à jour** — nouvelles fonctionnalités du système`,
+      chips: ['Comment créer un compte ?', 'Comment ajouter un produit ?', 'Comment payer par mobile money ?', 'Comment suivre ma commande ?', 'Quelles sont les saisons agricoles ?'],
+    },
+    rw: {
+      text:
+        `Nshobora kugufasha kuri byose birebana na FarmerJoin. Ikibazo cyawe nticyanyuze ku ngingo yihariye, dore ingingo nzi:\n\n` +
+        `**Konti** — kwiyandikisha, kwinjira, password, roles za konti, guhindura amakuru\n` +
+        `**Kugura** — ibicuruzwa, cart, kwishyura (mobile money), kohereza, orders, reviews\n` +
+        `**Kwicuruza** — kongera igicuruzwa, umwirondoro w'umuhinzi, ibiciro\n` +
+        `**Koperative & Admin** — koperative, abakoresha, kubuza konti\n` +
+        `**Ubuhinzi** — ibihe by'umwaka (A/B/C), ikirere, scan y'ibimera (AgriAI)\n` +
+        `**Amahinduka** — ibibishya muri sisiteme`,
+      chips: ['Nigute ninjira?', 'Nigute nongera igicuruzwa?', 'Nigute nishyura?', 'Mwomenge ibihe by\'ubuhinzi', 'Ni iki kigaragaza muri FarmerJoin?'],
+    },
+  };
+  return base[lang] || base.en;
 }
 
 function detectLang(query) {
@@ -186,13 +283,49 @@ function answer({ query, language, role, context }) {
   }
 
   if (!best || bestScore < MIN_SCORE) {
+    // Fuzzy fallback: answer from the most word-overlapping topic so every
+    // system-related question still gets a real response.
+    const qwords = tokens(cleaned);
+    let hintBest = null;
+    let hintScore = 0;
+    for (const topic of searchSpace) {
+      const s = closestHintScore(topic, qwords);
+      if (s > hintScore) {
+        hintScore = s;
+        hintBest = topic;
+      }
+    }
+    if (hintBest) {
+      if (hintBest.id === 'systemChangelog') {
+        return {
+          success: true,
+          provider: 'built-in',
+          topic: hintBest.id,
+          language: detected,
+          answer: (localizedIntro(detected) || '') + changelogAnswer(context ? context.changes : null, detected),
+          followUps: hintBest.followUps || [],
+        };
+      }
+      let rendered = (hintBest.message({ role: ctxRole, lang: detected }) || '').trim();
+      if (LIVE_FACTS_TOPICS.has(hintBest.id)) rendered += factsBlock(context ? context.facts : null);
+      return {
+        success: true,
+        provider: 'built-in',
+        topic: hintBest.id,
+        language: detected,
+        answer: (localizedIntro(detected) || '') + hintIntro(detected) + rendered,
+        followUps: hintBest.followUps || [],
+      };
+    }
+
+    const fb = structuredFallback(detected);
     return {
       success: true,
       provider: 'built-in',
       topic: 'fallback',
       language: detected,
-      answer: fallbackMessage(detected),
-      followUps: startChips(),
+      answer: (localizedIntro(detected) || '') + fb.text,
+      followUps: fb.chips,
     };
   }
 
