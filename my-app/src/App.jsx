@@ -37,6 +37,7 @@ import EditUserProfile from "./pages/EditUserProfile";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Layout from "./components/Layout";
+import AssistantWidget from "./components/AssistantWidget";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthRedirect from "./components/AuthRedirect";
 import initRuntimeConfig from './runtimeConfig';
@@ -285,6 +286,9 @@ function App() {
             </main>
 
             <Footer />
+
+            {/* Floating AI assistant available on every page */}
+            <AssistantWidget />
           </div>
         </Layout>
       </Router>

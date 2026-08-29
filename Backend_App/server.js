@@ -90,6 +90,10 @@ const smsService = require('./services/smsService');
 
 const aiRouter = require('./ai-rwanda/routes/ai.routes');
 
+// Import built-in System Assistant router (self-hosted knowledge AI)
+
+const systemAssistantRouter = require('./ai-assistant/routes');
+
 // Import Supabase Storage service
 
 const supabaseStorage = require('./services/supabaseStorage');
@@ -378,6 +382,10 @@ app.use('/api', mobileMoneyRoutes);
 // Mount AI Rwanda router
 
 app.use('/api/ai', aiRouter);
+
+// Mount the built-in System Assistant router (knowledge AI, no external service)
+
+app.use('/api/system-assistant', systemAssistantRouter);
 
 // Mount stats router (platform statistics)
 try {

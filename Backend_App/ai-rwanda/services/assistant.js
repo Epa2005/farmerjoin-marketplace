@@ -2,15 +2,36 @@
  * AI Assistant — bilingual EN/RW chatbot.
  * Answers ANY question (agriculture-focused, but handles general questions too).
  * Supports multi-turn conversation history.
+ *
+ * When the external provider (Lovable/Ollama) is unreachable — which is the
+ * normal case in production on Render — we fall back to the built-in
+ * FarmerJoin knowledge engine so the assistant always answers.
  */
 const ai = require('./aiProvider');
 const { detectLanguage, systemPrompt } = require('./language');
+const systemAssistant = require('../../ai-assistant/engine');
+
+// No external key configured → the built-in knowledge engine is the primary answerer.
+const externalConfigured = Boolean(process.env.LOVABLE_API_KEY);
 
 async function ask({ query, language, history = [] }) {
   if (!query || typeof query !== 'string') {
     return { success: false, error: 'query (string) is required' };
   }
   const lang = language === 'en' || language === 'rw' ? language : detectLanguage(query);
+
+  // Built-in first: answer from the FarmerJoin system knowledge base.
+  const built = systemAssistant.answer({ query, language: lang });
+  if (!externalConfigured) {
+    return {
+      success: true,
+      language: lang,
+      query,
+      answer: built.answer,
+      provider: built.provider || 'built-in',
+      followUps: built.followUps || [],
+    };
+  }
 
   // Build conversation context if history provided
   let userPrompt = query;
@@ -25,14 +46,14 @@ async function ask({ query, language, history = [] }) {
 
   const r = await ai.chat(systemPrompt(lang), userPrompt);
   if (!r.ok) {
+    // Fall back to the built-in engine if the external provider is down.
     return {
       success: true,
       language: lang,
       query,
-      answer: lang === 'rw'
-        ? "Mbabarira, serivisi ya AI ntibashije gusubiza ubu. Wagerageza none cyangwa ugahamagara RAB ku 250 788 843 700."
-        : "Sorry, the AI service is temporarily unavailable. Please try again or contact Rwanda Agriculture Board (RAB) at 250 788 843 700.",
-      provider: 'fallback',
+      answer: built.answer,
+      provider: built.provider || 'built-in',
+      followUps: built.followUps || [],
     };
   }
   return {
